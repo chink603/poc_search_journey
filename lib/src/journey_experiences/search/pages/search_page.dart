@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:mya_ui_design/mya_ui_design.dart';
 import 'package:oda_fe_framework/oda_framework.dart';
-import 'package:oda_search_micro_journey/src/journey_experience/search/search_experience.dart';
 
 class SearchPage extends OdaPage {
-  static const String path = '${SearchExperience.path}/search_page';
+  static const String path = 'search_page';
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
   final ValueNotifier<bool> _isButtonVisible = ValueNotifier<bool>(false);
   final ScrollController _scrollControllerList = ScrollController();
 
+  // @override
+  // void dispose() {
+  //   _isButtonVisible.dispose();
+  //   _scrollControllerList.dispose();
+  //   super.dispose();
+  // }
+
   @override
   Widget builder(BuildContext context, Map<String, dynamic>? arguments) {
-    final MyaThemeColors myaColors = context.myaThemeColors;
+    final myaColors = context.myaThemeColors;
     final coreLanguage = context.odaCore.coreLanguage;
 
     return ScaffoldMessenger(
@@ -36,7 +42,9 @@ class SearchPage extends OdaPage {
                         'myaisCommonSearch/headerNavigation/${MyaHeaderNav.compType}'),
                     isLeading: true,
                     isBackground: _isButtonVisible.value,
-                    onTapLeading: () {},
+                    onTapLeading: () {
+                      context.odaCore.coreNavigator.exitJourneyExp();
+                    },
                     headerText:
                         coreLanguage.getLanguageByKey('search_title_search'),
                     trailingActions: [
@@ -68,9 +76,10 @@ class SearchPage extends OdaPage {
             child: SafeArea(
                 child: ListView(
               controller: _scrollControllerList,
+              physics: const ClampingScrollPhysics(),
               children: [
                 context.odaCore.coreUI.createJourney(
-                  'j_search_everything',
+                  '/j_search',
                   callbackAction: (payload) {
                     // message delete history
                     // go to search route everything

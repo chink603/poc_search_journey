@@ -12,6 +12,12 @@ dependencies:
     sdk: flutter
   flutter_bloc: ^8.1.6
   intl: ^0.19.0
+  get_it: ^7.6.0
+
+  oda_data_tmf667_document_management:
+    git:
+      url: https://github.com/corp-ais/next-myais2-oda-data-tmf667-document-management.git
+      ref: staging  
   
   oda_fe_framework:
     git:
@@ -33,59 +39,7 @@ dependencies:
       url: https://github.com/corp-ais/next-core.git
       ref: staging
 
-  core_log:
-    git:
-      url: https://github.com/corp-ais/next-core.git
-      ref: staging
-      path: packages/l2_core_module/core_log
 
-  core_language:
-    git:
-      url: https://github.com/corp-ais/next-core.git
-      ref: staging
-      path: packages/l2_core_module/core_language
-
-  core_event:
-    git:
-      url: https://github.com/corp-ais/next-core.git
-      ref: staging
-      path: packages/l2_core_module/core_event
-
-  core_network_websocket:
-    git:
-      url: https://github.com/corp-ais/next-core.git
-      ref: staging
-      path: packages/l2_core_module/core_network_websocket
-
-  core_network_http:
-    git:
-      url: https://github.com/corp-ais/next-core.git
-      ref: staging
-      path: packages/l2_core_module/core_network_http
-
-  core_interface:
-    git:
-      url: https://github.com/corp-ais/next-core.git
-      ref: staging
-      path: packages/l1_foundation/core_interface
-
-  core_exception:
-    git:
-      url: https://github.com/corp-ais/next-core.git
-      ref: staging
-      path: packages/l1_foundation/core_exception
-
-  core_data:
-    git:
-      url: https://github.com/corp-ais/next-core.git
-      ref: staging
-      path: packages/l2_core_module/core_data
-
-  core_extension:
-    git:
-      url: https://github.com/corp-ais/next-core.git
-      ref: staging
-      path: packages/l1_foundation/core_extension
 
 dev_dependencies:
   flutter_test:
@@ -99,7 +53,7 @@ dependency_overrides:
   http: ^1.0.0
   web: ^0.5.1
   firebase_core: ^3.4.1
-
+  realm: ^20.1.1
   oda_fe_framework:
     git:
       url: https://github.com/corp-ais/next-oda-fe-framework
@@ -120,64 +74,6 @@ dependency_overrides:
       url: https://github.com/corp-ais/next-core.git
       ref: staging
 
-  core_log:
-    git:
-      url: https://github.com/corp-ais/next-core.git
-      ref: staging
-      path: packages/l2_core_module/core_log
-
-  core_language:
-    git:
-      url: https://github.com/corp-ais/next-core.git
-      ref: staging
-      path: packages/l2_core_module/core_language
-
-  core_event:
-    git:
-      url: https://github.com/corp-ais/next-core.git
-      ref: staging
-      path: packages/l2_core_module/core_event
-
-  core_network_websocket:
-    git:
-      url: https://github.com/corp-ais/next-core.git
-      ref: staging
-      path: packages/l2_core_module/core_network_websocket
-
-  core_network_http:
-    git:
-      url: https://github.com/corp-ais/next-core.git
-      ref: staging
-      path: packages/l2_core_module/core_network_http
-
-  core_interface:
-    git:
-      url: https://github.com/corp-ais/next-core.git
-      ref: staging
-      path: packages/l1_foundation/core_interface
-
-  core_exception:
-    git:
-      url: https://github.com/corp-ais/next-core.git
-      ref: staging
-      path: packages/l1_foundation/core_exception
-
-  core_data:
-    git:
-      url: https://github.com/corp-ais/next-core.git
-      ref: staging
-      path: packages/l2_core_module/core_data
-
-  core_extension:
-    git:
-      url: https://github.com/corp-ais/next-core.git
-      ref: staging
-      path: packages/l1_foundation/core_extension
-
-# For information on the generic Dart part of this file, see the
-# following page: https://dart.dev/tools/pub/pubspec
-
-# The following section is specific to Flutter packages.
 flutter:
 
   # To add assets to your package, add an assets section, like this:

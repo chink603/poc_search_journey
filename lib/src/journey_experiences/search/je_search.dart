@@ -2,7 +2,7 @@ import 'package:oda_fe_framework/oda_framework.dart';
 
 import 'pages/pages.dart';
 
-class SearchExperience extends OdaJourneyExp {
+class JeSearch extends OdaJourneyExp {
   static const String path = '/je_search';
   @override
   OdaJourneyExpInfo info() {

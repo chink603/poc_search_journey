@@ -74,6 +74,8 @@ class SearchPage extends OdaPage {
                   callbackAction: (payload) {
                     // message delete history
                     // go to search route everything
+                    // emit event test
+                    context.odaCore.coreEvent.dispatchEvent(eventName: 'test');
                   },
                 )
               ],
@@ -86,8 +88,16 @@ class SearchPage extends OdaPage {
 
   @override
   OdaPageInfo info() {
-    return const OdaPageInfo(
+    return OdaPageInfo(
       path: path,
+      eventListeners: [
+        EventListenerInfo(
+            eventName: 'test',
+            eventListener: (context, data) {
+              context.odaCore.coreLog.debug('message $data');
+              return false;
+            })
+      ],
     );
   }
 }

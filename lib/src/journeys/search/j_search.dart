@@ -5,6 +5,7 @@ import 'package:oda_fe_framework/oda_framework.dart';
 import 'bloc/bloc.dart';
 
 import 'steps/step.dart';
+import 'package:core/utils/quick_menu_management.dart';
 
 class JSearch extends OdaJourney {
   static const String path = '/j_search';
@@ -17,6 +18,9 @@ class JSearch extends OdaJourney {
         create: (context) => SearchBloc(
           context: context,
           searchFaqsUsecase: GetIt.I.get<SearchFaqsUsecase>(),
+          coreConfiguration: CoreConfiguration(),
+          quickMenuManagement: QuickMenuManagement(),
+          coreData: CoreData(), 
         )..add(SearchStartEvent()),
       ),
     ];

@@ -1,4 +1,4 @@
-class JSearchConfigLang {
+class JSearchConfig {
  static final Map<String, String> _values = {};
  
  static Map<String, String> get values => _values;

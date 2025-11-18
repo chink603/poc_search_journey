@@ -4,8 +4,9 @@ final class SearchInitialState extends ODAInitialState{}
 
 final class SearchStartState extends ODAInitialState{
   final List<String> searchKeywordList;
-  final List<String> historySearchList;
-  SearchStartState({required this.searchKeywordList, required this.historySearchList});
+  final List<String> searchHistory;
+  final List<String> suggestKeywords;
+  SearchStartState({required this.searchKeywordList, required this.searchHistory, required this.suggestKeywords});
 }
 
 final class SearchLoadingState extends ODALoadingState{}

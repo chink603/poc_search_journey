@@ -4,11 +4,32 @@ final class SearchStartEvent extends ODAStartEvent {}
 
 final class SearchLoadEvent extends ODALoadEvent {
   final String searchText;
-  final String language;
-  SearchLoadEvent({required this.searchText, required this.language});
+
+  SearchLoadEvent({required this.searchText});
 
   @override
   List<Object> get props => [searchText];
 }
 
-final class SearchPressedEvent extends ODAPressedEvent {}
+final class SearchPressedEvent extends ODAPressedEvent {
+  final String searchText;
+
+  SearchPressedEvent({required this.searchText});
+
+  @override
+  List<Object> get props => [searchText];
+}
+
+final class DeleteHistoryEvent extends ODAPressedEvent {}
+
+final class AddHistorySearchEvent extends ODAPressedEvent {
+  final String searchText;
+
+  AddHistorySearchEvent({required this.searchText});
+
+  @override
+  List<Object> get props => [searchText];
+}
+
+
+

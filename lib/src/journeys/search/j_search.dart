@@ -21,6 +21,8 @@ class JSearch extends OdaJourney {
           coreConfiguration: CoreConfiguration(),
           quickMenuManagement: QuickMenuManagement(),
           coreData: CoreData(), 
+          coreLanguage: context.odaCore.coreLanguage,
+          routeName: arguments?['routeName'] ?? '',
         )..add(SearchStartEvent()),
       ),
     ];

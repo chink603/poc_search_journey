@@ -22,7 +22,6 @@ class SearchPage extends OdaPage {
   @override
   Widget builder(BuildContext context, Map<String, dynamic>? arguments) {
     final myaColors = context.myaThemeColors;
-    final coreLanguage = context.odaCore.coreLanguage;
     ConfigLang.values = arguments?['configLang'] ?? {};
     return ScaffoldMessenger(
         key: scaffoldMessengerKey,
@@ -39,20 +38,19 @@ class SearchPage extends OdaPage {
             onTapLeading: () {
               context.odaCore.coreNavigator.exitJourneyExp();
             },
-            headerText: coreLanguage.getLanguageByKey(ConfigLang.searchTitle),
+            headerText: context.lang(ConfigLang.searchTitle),
             trailingActions: [
               // if (value)
               ValueListenableBuilder<bool>(
                   valueListenable: _isButtonVisible,
                   builder: (context, value, child) {
-                    if (value) return const SizedBox.shrink();
+                    if (!value) return const SizedBox.shrink();
                     return MyaButton(
                       key: SearchKeyUtil.compose(
                           pageKey: pageKey,
                           section: section,
                           components: [MyaButton.compType, 'goToTop']),
-                      label: coreLanguage
-                          .getLanguageByKey(ConfigLang.buttonGoToTop),
+                      label: context.lang(ConfigLang.buttonGoToTop),
                       theme: MyaButtonTheme.primary,
                       style: MyaButtonStyle.text,
                       size: MyaButtonSize.large,
@@ -64,23 +62,19 @@ class SearchPage extends OdaPage {
                     );
                   })
             ],
-
           ),
           body: Container(
             color: myaColors.bgBg,
             child: NotificationListener(
                 onNotification: (ScrollNotification notification) {
                   _isButtonVisible.value = notification.metrics.atEdge &&
-                      notification.metrics.pixels <= 0;
+                      notification.metrics.pixels > 0;
                   return false;
                 },
                 child: context.odaCore.coreUI.createJourney(
                   jPath,
-                  callbackAction: (payload) {
-                    // message delete history
-                    // go to search route everything
-                    // emit event test
-                    // context.odaCore.coreEvent.dispatchEvent(eventName: 'test');
+                  arguments: {
+                    'routeName': 'PRIVILEGE',
                   },
                 )),
           ),
@@ -89,8 +83,28 @@ class SearchPage extends OdaPage {
 
   @override
   OdaPageInfo info() {
-    return const OdaPageInfo(
-      path: path,
-    );
+    return OdaPageInfo(path: path, eventListeners: [
+      EventListenerInfo(
+        eventName: 'SearchShowSuccessSnackbar',
+        eventListener: (context, data) {
+          scaffoldMessengerKey.currentState?.showSnackBar(
+            SnackBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              content: MyaToast(
+                key: SearchKeyUtil.compose(
+                    pageKey: pageKey,
+                    section: 'alertRecentSearchAreCleared',
+                    components: [MyaToast.compType]),
+                toastStyle: MyaToastStyle.success,
+                prefixIcon: data['iconKey'],
+                descriptionText: context.lang(data['messageKey'] ?? '').langEmpty,
+              ),
+            ),
+          );
+          return false;
+        },
+      ),
+    ]);
   }
 }

@@ -1,18 +1,23 @@
 import 'package:flutter_sticky_header/flutter_sticky_header.dart';
 import 'package:mya_ui_design/mya_ui_design.dart';
 import 'package:oda_fe_framework/oda_framework.dart';
-import '../../../journey_experiences/search/utils/util.dart';
+
 import '../bloc/bloc/search_bloc.dart';
 import '../models/models.dart';
+import '../utils/util.dart';
 import '../widgets/widgets.dart';
 
 class SearchStep0 extends OdaStep {
   static const String path = '1';
   ScrollController scrollController = ScrollController();
-
+  SearchBloc? searchBloc;
+  final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
   @override
   void dispose() {
     scrollController.dispose();
+    searchBloc?.close();
+    searchBloc = null;
     super.dispose();
   }
 
@@ -21,91 +26,98 @@ class SearchStep0 extends OdaStep {
     if (!scrollController.hasClients) {
       scrollController = ScrollController();
     }
+    searchBloc ??= context.read<SearchBloc>();
     final myaColors = context.myaThemeColors;
-    final coreLanguage = context.odaCore.coreLanguage;
 
-    return CustomScrollView(
-      controller: scrollController,
-      physics: const ClampingScrollPhysics(),
-      slivers: [
-        SliverToBoxAdapter(
-          child: Container(
-            color: myaColors.bgContainer,
-            padding: const EdgeInsets.only(bottom: kPadding6),
-            child: Stack(
-              alignment: Alignment.topRight,
-              children: [
-                BlocBuilder<SearchBloc, ODAState>(
-                  buildWhen: (previous, current) =>
-                      previous is SearchInitialState &&
-                      current is SearchStartState,
-                  builder: (context, state) {
-                    if (state is SearchInitialState) {
+    return ScaffoldMessenger(
+      key: scaffoldMessengerKey,
+      child: CustomScrollView(
+        controller: scrollController,
+        physics: const ClampingScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+            child: Container(
+              color: myaColors.bgContainer,
+              padding: const EdgeInsets.only(bottom: kPadding6),
+              child: Stack(
+                alignment: Alignment.topRight,
+                children: [
+                  BlocBuilder<SearchBloc, ODAState>(
+                    buildWhen: (previous, current) =>
+                        previous is SearchInitialState &&
+                        current is SearchStartState,
+                    builder: (context, state) {
+                      if (state is SearchInitialState) {
+                        return const SizedBox.shrink();
+                      }
+                      return _buildSearchInputField(
+                          context,
+                          myaColors,
+                          state is SearchStartState
+                              ? state.searchKeywordList
+                              : []);
+                    },
+                  ),
+                  BlocBuilder<SearchBloc, ODAState>(
+                    builder: (context, state) {
+                      if (state is SearchSuccessState) {
+                        return _buildFilter(context, state);
+                      }
                       return const SizedBox.shrink();
-                    }
-                    return _buildSearchInputField(
-                        myaColors,
-                        coreLanguage,
-                        state is SearchStartState
-                            ? state.searchKeywordList
-                            : []);
-                  },
-                ),
-                BlocBuilder<SearchBloc, ODAState>(
-                  builder: (context, state) {
-                    if (state is SearchSuccessState) {
-                      return _buildFilter(context, state);
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
-              ],
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        SliverStickyHeader.builder(
-            builder: (context, state) => BlocBuilder<SearchBloc, ODAState>(
-                  builder: (context, state) {
-                    if (state is! SearchSuccessState) {
-                      return Container(
-                        decoration: BoxDecoration(
-                            color: context.myaThemeColors.bgContainer,
-                            border: MyaDividerBorder(context, isShow: true)),
+          SliverStickyHeader.builder(
+              builder: (context, state) => BlocBuilder<SearchBloc, ODAState>(
+                    builder: (context, state) {
+                      if (state is! SearchSuccessState) {
+                        return Container(
+                          decoration: BoxDecoration(
+                              color: context.myaThemeColors.bgContainer,
+                              border: MyaDividerBorder(context, isShow: true)),
+                        );
+                      }
+                      return _buildCategory(
+                        context,
+                        state.categories,
+                        state.subCategories,
                       );
-                    }
-                    return _buildCategory(
-                      context,
-                      state.categories,
-                      state.subCategories,
-                    );
-                  },
-                ),
-            sliver:
-                BlocBuilder<SearchBloc, ODAState>(builder: (context, state) {
-              if (state is SearchStartState) {
-                // history and suggesttion
-                return _buildHistoryAndSuggestion(context);
-              }
-              if (state is SearchLoadingState) {
-                // loading
-                return _buildLoading();
-              }
-              if (state is SearchSuccessState) {
-                // result
-                return _buildResult(context);
-              }
-              if (state is SearchErrorState) {
-                // error
-                return _buildError(context);
-              }
-              return const SliverToBoxAdapter(child: SizedBox.shrink());
-            })),
-      ],
+                    },
+                  ),
+              sliver:
+                  BlocBuilder<SearchBloc, ODAState>(builder: (context, state) {
+                if (state is SearchStartState) {
+                  // history and suggesttion
+                  return _buildHistoryAndSuggestion(
+                    context,
+                    state.searchHistory,
+                    state.suggestKeywords,
+                  );
+                }
+                if (state is SearchLoadingState) {
+                  // loading
+                  return _buildLoading();
+                }
+                if (state is SearchSuccessState) {
+                  // result
+                  return _buildResult(context);
+                }
+                if (state is SearchErrorState) {
+                  // error
+                  return _buildError(context);
+                }
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
+              })),
+        ],
+      ),
     );
   }
 
-  Widget _buildSearchInputField(MyaThemeColors myaColors,
-      OdaCoreLanguage coreLanguage, List<String> searchKeywordList) {
+  Widget _buildSearchInputField(BuildContext context, MyaThemeColors myaColors,
+      List<String> searchKeywordList) {
     return RawAutocomplete<String>(
         key: SearchKeyUtil.compose(
             pageKey: 'seach',
@@ -126,7 +138,9 @@ class SearchStep0 extends OdaStep {
             return getMatches;
           }
         },
-        onSelected: (String selection) {},
+        onSelected: (String keyword) {
+          searchBloc?.add(AddHistorySearchEvent(searchText: keyword));
+        },
         fieldViewBuilder: (
           BuildContext context,
           TextEditingController searchController,
@@ -145,7 +159,7 @@ class SearchStep0 extends OdaStep {
                 child: MyaInputFieldSearch(
                     key: const ValueKey(
                         'myaisCommonSearch/headerNavigation/${MyaInputFieldSearch.compType}/inputSearch'),
-                    hintText: coreLanguage.getLanguageByKey('search_hint_text'),
+                    hintText: context.lang('search_hint_text'),
                     borderRadius: kRadius8,
                     isSuccess: false,
                     controller: searchController,
@@ -154,9 +168,10 @@ class SearchStep0 extends OdaStep {
                     onTapOutside: (_) => focusNode2.unfocus(),
                     onFieldSubmitted: (String value) {
                       if (value.replaceAll(" ", "") != "") {
-                        context.read<SearchBloc>().add(SearchLoadEvent(
-                            searchText: value,
-                            language: coreLanguage.currentLanguage));
+                        context
+                            .read<SearchBloc>()
+                            .add(SearchLoadEvent(searchText: value));
+                        searchBloc?.add(AddHistorySearchEvent(searchText: value));
                       }
                     }),
               );
@@ -250,6 +265,34 @@ class SearchStep0 extends OdaStep {
     );
   }
 
+  Widget _buildHistoryAndSuggestion(
+    BuildContext context,
+    List<String> searchHistory,
+    List<String> suggestKeywords,
+  ) {
+    return SliverToBoxAdapter(
+        child: SearchHistorySuggest(
+      searchHistory: searchHistory,
+      suggestKeywords: suggestKeywords,
+      onPressed: (String keyword) {
+        searchBloc?.add(AddHistorySearchEvent(searchText: keyword));
+      },
+      onClear: () {
+        searchBloc?.add(DeleteHistoryEvent());
+        context.odaCore.coreEvent.dispatchEvent(
+          eventName: 'SearchShowSuccessSnackbar',
+          data: {
+            'messageKey': 'search_alert_recent_cleared',
+            'iconKey': 'iconui_general_success',
+          },
+        );
+      },
+      onCancel: () {
+        // add event log
+      },
+    ));
+  }
+
   Widget _buildCategory(
       BuildContext context,
       List<SearchCategoryModel> categories,
@@ -282,10 +325,6 @@ class SearchStep0 extends OdaStep {
         ],
       ),
     );
-  }
-
-  Widget _buildHistoryAndSuggestion(BuildContext context) {
-    return SliverToBoxAdapter(child: Container());
   }
 
   Widget _buildResult(BuildContext context) {

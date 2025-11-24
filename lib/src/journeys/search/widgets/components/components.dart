@@ -7,7 +7,7 @@ export 'package_results.dart';
 export 'privilege_results.dart';
 export 'quick_menu_results.dart';
 export 'search_history_suggest.dart';
-
+export 'search_input_field.dart';
 
 
 

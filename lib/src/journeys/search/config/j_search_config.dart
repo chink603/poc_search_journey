@@ -13,6 +13,7 @@ class JSearchConfig {
  }
 
  static String get titleSearch => _values['title_search'] ?? '';
+ static String get buttonGoToTop => _values['button_go_to_top'] ?? '';
 
  static String get placeholderSearch => _values['placeholder_search'] ?? '';
 

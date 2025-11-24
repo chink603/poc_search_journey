@@ -14,3 +14,7 @@ extension SearchKeyExtension on Key {
     return ValueKey(result.join('/'));
   }
 }
+extension StringNullExtension on String {
+  String? get langEmpty => isEmpty ? null : this;
+}
+

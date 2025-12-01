@@ -7,7 +7,7 @@ import 'bloc/bloc.dart';
 import 'steps/step.dart';
 import 'package:core/utils/quick_menu_management.dart';
 
-class JSearch extends OdaJourney {
+class JourneySearch extends OdaJourney {
   static const String path = '/j_search';
 
   @override

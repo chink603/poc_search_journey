@@ -3,6 +3,7 @@ import 'package:oda_fe_framework/oda_framework.dart';
 import 'package:oda_search_micro_journey/src/journeys/search/models/models.dart';
 import 'package:core/utils/quick_menu_model.dart';
 import 'package:core/utils/quick_menu_management.dart';
+import 'package:oda_search_micro_journey/src/journeys/search/utils/util.dart';
 
 part 'search_event.dart';
 part 'search_state.dart';
@@ -40,28 +41,37 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
       final historySearch = _getHistorySearch();
       final suggestKeywords = _getSuggestionSearch();
       emit(SearchStartState(
+          searchText: '',
           searchKeywordList: distinctWord,
           searchHistory: historySearch,
           suggestKeywords: suggestKeywords));
     });
     on<SearchLoadEvent>((event, emit) async {
-      emit(SearchLoadingState());
-      final result = await searchFaqsUsecase.call(
-          input: event.searchText, language: coreLanguage.currentLanguage);
-      await Future.delayed(const Duration(seconds: 2));
-      if (result.isLeft()) {
-        emit(SearchErrorState());
+      if (event.checkRouteModel.type == CheckRouteEnum.none) {
+        emit(SearchLoadingState(searchText: event.searchText));
+        final result = await searchFaqsUsecase.call(
+            input: event.searchText, language: coreLanguage.currentLanguage);
+        await Future.delayed(const Duration(seconds: 2));
+        if (result.isLeft()) {
+          emit(SearchErrorState());
+        }
+        if (result.isRight()) {
+          emit(SearchSuccessState(categories: const [
+            SearchCategoryModel(id: '1', label: 'test', value: true),
+          ], subCategories: const []));
+        }
       } else {
-        emit(SearchSuccessState(categories: const [
-          SearchCategoryModel(id: '1', label: 'test', value: true),
-        ], subCategories: const []));
+        if (state is SearchStartState) {
+          final updatedState = state as SearchStartState;
+          emit(updatedState.copyWith(searchText: event.searchText));
+        }
       }
     });
     on<SearchPressedEvent>((event, emit) {});
-    on<AddHistorySearchEvent>((event, emit)  {
-       _addHistorySearch(event.searchText);
+    on<HistoryAddSearchEvent>((event, emit) {
+      _addHistorySearch(event.searchText);
     });
-    on<DeleteHistoryEvent>((event, emit) async {
+    on<HistoryDeleteSearchEvent>((event, emit) async {
       await _deleteHistorySearch();
       add(SearchStartEvent());
     });

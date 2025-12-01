@@ -4,11 +4,8 @@ final class SearchStartEvent extends ODAStartEvent {}
 
 final class SearchLoadEvent extends ODALoadEvent {
   final String searchText;
-
-  SearchLoadEvent({required this.searchText});
-
-  @override
-  List<Object> get props => [searchText];
+  final CheckRouteModel checkRouteModel;
+  SearchLoadEvent({required this.searchText, required this.checkRouteModel});
 }
 
 final class SearchPressedEvent extends ODAPressedEvent {
@@ -20,12 +17,30 @@ final class SearchPressedEvent extends ODAPressedEvent {
   List<Object> get props => [searchText];
 }
 
-final class DeleteHistoryEvent extends ODAPressedEvent {}
+final class SelectCategoryEvent extends ODAPressedEvent {
+  final String category;
+  
+  SelectCategoryEvent({required this.category});
+  
+  @override
+  List<Object> get props => [category];
+}
 
-final class AddHistorySearchEvent extends ODAPressedEvent {
+final class SelectSubCategoryEvent extends ODAPressedEvent {
+  final String subCategory;
+  
+  SelectSubCategoryEvent({required this.subCategory});
+  
+  @override
+  List<Object> get props => [subCategory];
+}
+
+final class HistoryDeleteSearchEvent extends ODAPressedEvent {}
+
+final class HistoryAddSearchEvent extends ODAPressedEvent {
   final String searchText;
 
-  AddHistorySearchEvent({required this.searchText});
+  HistoryAddSearchEvent({required this.searchText});
 
   @override
   List<Object> get props => [searchText];

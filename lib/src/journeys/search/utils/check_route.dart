@@ -33,9 +33,9 @@ class CheckRouteHelper {
 
   CheckRouteHelper({required this.searchText, required this.fullConfig});
 
-  CheckRouteModel get getRouteModel => checkManageRoute();
+  CheckRouteModel get getRouteModel => _checkManageRoute();
 
-  CheckRouteModel checkManageRoute() {
+  CheckRouteModel _checkManageRoute() {
     final normalizedSelection = searchText.toLowerCase();
 
     final routeMatch = _findMainRoute(

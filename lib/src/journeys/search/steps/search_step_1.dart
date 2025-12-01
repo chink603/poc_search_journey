@@ -44,7 +44,11 @@ class SearchStep0 extends OdaStep {
                 components: [MyaHeaderNav.compType]),
             isLeading: true,
             isDivider: false,
-            onTapLeading: () {},
+            onTapLeading: () {
+              notifyCallBackAction(context: context, payload: {
+                'exit': true,
+              });
+            },
             headerText: context.lang(JSearchConfig.titleSearch),
             trailingActions: [
               ValueListenableBuilder<bool>(
@@ -91,20 +95,16 @@ class SearchStep0 extends OdaStep {
                         child: Stack(
                           alignment: Alignment.topRight,
                           children: [
-                            BlocBuilder<SearchBloc, ODAState>(
-                              buildWhen: (previous, current) =>
-                                  previous is SearchInitialState &&
-                                  current is SearchStartState,
-                              builder: (context, state) {
-                                if (state is SearchInitialState) {
-                                  return const SizedBox.shrink();
-                                }
-                                return _buildSearchInputField(
-                                    context,
-                                    myaColors,
-                                    state is SearchStartState
-                                        ? state.searchKeywordList
-                                        : []);
+                            SearchInputField(
+                              key: SearchKeyUtil.compose(
+                                  pageKey: 'seach',
+                                  section: 'searchInputField',
+                                  components: ['rawAutocomplete']),
+                              onSelected: (String searchText) {
+                                _mangeSearch(context, searchText);
+                              },
+                              onEmpty: () {
+                                searchBloc?.add(SearchStartEvent());
                               },
                             ),
                             BlocBuilder<SearchBloc, ODAState>(
@@ -123,19 +123,18 @@ class SearchStep0 extends OdaStep {
                         builder: (context, state) =>
                             BlocBuilder<SearchBloc, ODAState>(
                               builder: (context, state) {
-                                if (state is! SearchSuccessState) {
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                        color:
-                                            context.myaThemeColors.bgContainer,
-                                        border: MyaDividerBorder(context,
-                                            isShow: true)),
+                                if (state is SearchSuccessState) {
+                                  return _buildCategory(
+                                    context,
+                                    state.categories,
+                                    state.subCategories,
                                   );
                                 }
-                                return _buildCategory(
-                                  context,
-                                  state.categories,
-                                  state.subCategories,
+                                return Container(
+                                  decoration: BoxDecoration(
+                                      color: context.myaThemeColors.bgContainer,
+                                      border: MyaDividerBorder(context,
+                                          isShow: true)),
                                 );
                               },
                             ),
@@ -168,19 +167,6 @@ class SearchStep0 extends OdaStep {
                 )),
           ),
         ));
-  }
-
-  Widget _buildSearchInputField(BuildContext context, MyaThemeColors myaColors,
-      List<String> searchKeywordList) {
-    return SearchInputField(
-        key: SearchKeyUtil.compose(
-            pageKey: 'seach',
-            section: 'searchInputField',
-            components: ['rawAutocomplete']),
-        searchKeywordList: searchKeywordList,
-        onSelected: (String searchText) {
-          _mangeSearch(context, searchText);
-        });
   }
 
   Widget _buildFilter(BuildContext context, state) {
@@ -246,7 +232,7 @@ class SearchStep0 extends OdaStep {
         _mangeSearch(context, searchText);
       },
       onClear: () {
-        searchBloc?.add(DeleteHistoryEvent());
+        searchBloc?.add(HistoryDeleteSearchEvent());
         scaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(
             backgroundColor: Colors.transparent,
@@ -341,7 +327,7 @@ class SearchStep0 extends OdaStep {
       case CheckRouteEnum.tab:
         notifyCallBackAction(context: context, payload: {
           'onSearch': {
-            'type': 'tab',
+            'type': CheckRouteEnum.tab.name,
             'routeName': checkRoute.tabName,
           }
         });
@@ -350,7 +336,7 @@ class SearchStep0 extends OdaStep {
         if (checkRoute.routeName != null) {
           notifyCallBackAction(context: context, payload: {
             'onSearch': {
-              'type': 'route',
+              'type': CheckRouteEnum.route.name,
               'routeName': checkRoute.routeName,
               'arguments': checkRoute.arguments,
             }
@@ -360,16 +346,18 @@ class SearchStep0 extends OdaStep {
       case CheckRouteEnum.url:
         notifyCallBackAction(context: context, payload: {
           'onSearch': {
-            'type': 'url',
+            'type': CheckRouteEnum.url.name,
             'urlName': checkRoute.urlName,
             'requestAuthen': checkRoute.requestAuthen,
           }
         });
 
         break;
-      default:
-        searchBloc?.add(SearchLoadEvent(searchText: searchText));
+        default:
+          // Handle unknown route type if needed
+          break;
     }
+    searchBloc?.add(SearchLoadEvent(searchText: searchText, checkRouteModel: checkRoute));
   }
 
   @override

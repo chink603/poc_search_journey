@@ -12,10 +12,10 @@ class JSearchConfig {
   _values.clear();
  }
 
- static String get titleSearch => _values['title_search'] ?? '';
- static String get buttonGoToTop => _values['button_go_to_top'] ?? '';
+ static String get titleSearch => _values['search_title'] ?? 'search_title_search';
+ static String get buttonGoToTop => _values['search_button_go_to_top'] ?? 'search_button_go_to_top';
 
- static String get placeholderSearch => _values['placeholder_search'] ?? '';
+ static String get placeholderSearch => _values['search_placeholder'] ?? 'search_hint_text';
 
- static String get buttonSearch => _values['button_search'] ?? '';
+ static String get buttonSearch => _values['search_button_search'] ?? 'search_button_search';
 }

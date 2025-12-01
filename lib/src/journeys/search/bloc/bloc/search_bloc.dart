@@ -268,16 +268,17 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
   Future<SearchAssetModel> _getAsset() async {
     final currentAsset = await _getCurrentAsset();
     final isLogin = ntypeManagement.isLogin();
-    final rawNtype = await ntypeManagement.getRawNType();
+    final rawNtype = await ntypeManagement.getRawNType() ?? '';
     final mobileNumber = await currentAsset.mobileNumber;
     final mobileNumberInternal = _convertToInternationalFormat(mobileNumber);
-    final isGetPackage = conditionGetPackage();
-    
+    final isGetPackage =
+        await conditionGetPackage(rawNtype: rawNtype, isLogin: isLogin);
+
     return SearchAssetModel(
         currentAsset: currentAsset,
-        isLogin: isLogin, 
-        mobileNumber: mobileNumber, 
-        rawNtype: rawNtype ?? '',
+        isLogin: isLogin,
+        mobileNumber: mobileNumber,
+        rawNtype: rawNtype,
         isGetPackage: isGetPackage,
         mobileNumberInternal: mobileNumberInternal);
   }
@@ -293,14 +294,27 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
     }
     return null;
   }
+
   String _convertToInternationalFormat(String mobileNumber) {
-  final numberWithoutLeadingZero =
-      mobileNumber.startsWith('0') ? mobileNumber.substring(1) : mobileNumber;
+    final numberWithoutLeadingZero =
+        mobileNumber.startsWith('0') ? mobileNumber.substring(1) : mobileNumber;
 
-  return '66$numberWithoutLeadingZero';
-}
+    return '66$numberWithoutLeadingZero';
+  }
 
-  bool conditionGetPackage(){
+  Future<bool> conditionGetPackage(
+      {required String rawNtype, required bool isLogin}) async {
+    if (isLogin && rawNtype.isNotEmpty) {
+      final groupNType = await ntypeManagement.getGroupNType();
+      final isCCI = rawNtype == 'CCI';
+      final isIot = groupNType == NType.iot;
+      final isAisMainGroup = switch (groupNType) {
+        NType.nonAis || NType.fibre => false,
+        _ => true,
+      };
+      final condition = isAisMainGroup && !isCCI && !isIot;
+      return condition;
+    }
     return false;
   }
   // end asset

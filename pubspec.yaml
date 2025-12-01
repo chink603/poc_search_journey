@@ -15,6 +15,17 @@ dependencies:
   get_it: ^7.6.0
   flutter_sticky_header: ^0.8.0
   dartx: ^1.2.0
+
+  oda_data_tmf672_user_roles_permissions:
+    git:
+      url: "https://github.com/corp-ais/next-myais2-oda-data-tmf672-user-roles-permissions.git"
+      ref: staging  
+
+  oda_data_tmf658_loyalty_management:
+    git:
+      url: "https://github.com/corp-ais/next-myais2-oda-data-tmf658-loyalty-management.git"
+      ref: staging
+
   oda_data_tmf667_document_management:
     git:
       url: https://github.com/corp-ais/next-myais2-oda-data-tmf667-document-management.git
@@ -65,6 +76,17 @@ dependency_overrides:
   bloc_test: ^10.0.0
   permission_handler: ^10.4.3
   dio: ^4.0.6
+
+  oda_data_tmf672_user_roles_permissions:
+    git:
+      url: "https://github.com/corp-ais/next-myais2-oda-data-tmf672-user-roles-permissions.git"
+      ref: staging
+      
+  oda_data_tmf658_loyalty_management:
+    git:
+      url: "https://github.com/corp-ais/next-myais2-oda-data-tmf658-loyalty-management.git"
+      ref: staging
+        
   oda_data_tmf667_document_management:
     git:
       url: https://github.com/corp-ais/next-myais2-oda-data-tmf667-document-management.git

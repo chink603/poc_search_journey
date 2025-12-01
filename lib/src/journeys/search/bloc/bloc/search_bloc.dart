@@ -1,5 +1,10 @@
+import 'package:core/utils/ntype_management/ntype_management.dart';
+import 'package:oda_data_schema/main.core.export.dart';
 import 'package:oda_data_tmf667_document_management/oda_data_tmf667_document_management.dart';
+import 'package:oda_data_tmf672_user_roles_permissions/utils/utils.dart';
 import 'package:oda_fe_framework/oda_framework.dart';
+import 'package:oda_presentation_universal/domain/customer_domain/usecase/get_assets_list_realm_usecase.dart';
+import 'package:oda_presentation_universal/utils/home/home_universal_utils.dart';
 import 'package:oda_search_micro_journey/src/journeys/search/models/models.dart';
 import 'package:core/utils/quick_menu_model.dart';
 import 'package:core/utils/quick_menu_management.dart';
@@ -18,9 +23,13 @@ typedef FullConfig = ({
 
 class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
   final String historySearchKey = 'searchHistoryKey';
-  final SearchFaqsUsecase searchFaqsUsecase;
+  final SearchFaqsUsecase useCaseSearchFaq;
+  final GetAssetsListRealmUsecase useCaseAssetListRealm;
+
   final CoreConfiguration coreConfiguration;
   final QuickMenuManagement quickMenuManagement;
+  final NTypeManagement ntypeManagement;
+
   final CoreData coreData;
   final OdaCoreLanguage coreLanguage;
   final String routeName;
@@ -28,9 +37,11 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
 
   SearchBloc({
     required super.context,
-    required this.searchFaqsUsecase,
+    required this.useCaseSearchFaq,
     required this.coreConfiguration,
     required this.quickMenuManagement,
+    required this.ntypeManagement,
+    required this.useCaseAssetListRealm,
     required this.coreData,
     required this.coreLanguage,
     required this.routeName,
@@ -47,9 +58,11 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
           suggestKeywords: suggestKeywords));
     });
     on<SearchLoadEvent>((event, emit) async {
+      add(HistoryAddSearchEvent(searchText: event.searchText));
+      final asset = await _getAsset();
       if (event.checkRouteModel.type == CheckRouteEnum.none) {
         emit(SearchLoadingState(searchText: event.searchText));
-        final result = await searchFaqsUsecase.call(
+        final result = await useCaseSearchFaq.call(
             input: event.searchText, language: coreLanguage.currentLanguage);
         await Future.delayed(const Duration(seconds: 2));
         if (result.isLeft()) {
@@ -60,16 +73,19 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
             SearchCategoryModel(id: '1', label: 'test', value: true),
           ], subCategories: const []));
         }
-      } else {
-        if (state is SearchStartState) {
-          final updatedState = state as SearchStartState;
-          emit(updatedState.copyWith(searchText: event.searchText));
-        }
       }
     });
     on<SearchPressedEvent>((event, emit) {});
-    on<HistoryAddSearchEvent>((event, emit) {
-      _addHistorySearch(event.searchText);
+    on<HistoryAddSearchEvent>((event, emit) async {
+      await _addHistorySearch(event.searchText);
+      if (state is SearchStartState) {
+        final currentState = state as SearchStartState;
+        final historySearch = _getHistorySearch();
+        emit(currentState.copyWith(
+          searchText: event.searchText,
+          searchHistory: historySearch,
+        ));
+      }
     });
     on<HistoryDeleteSearchEvent>((event, emit) async {
       await _deleteHistorySearch();
@@ -247,6 +263,47 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
     return DateCoreNavigator(startDate: startDate, endDate: endDate);
   }
   //end start event handler
+
+  //get asset for call data
+  Future<SearchAssetModel> _getAsset() async {
+    final currentAsset = await _getCurrentAsset();
+    final isLogin = ntypeManagement.isLogin();
+    final rawNtype = await ntypeManagement.getRawNType();
+    final mobileNumber = await currentAsset.mobileNumber;
+    final mobileNumberInternal = _convertToInternationalFormat(mobileNumber);
+    final isGetPackage = conditionGetPackage();
+    
+    return SearchAssetModel(
+        currentAsset: currentAsset,
+        isLogin: isLogin, 
+        mobileNumber: mobileNumber, 
+        rawNtype: rawNtype ?? '',
+        isGetPackage: isGetPackage,
+        mobileNumberInternal: mobileNumberInternal);
+  }
+
+  Future<EntityRef?> _getCurrentAsset() async {
+    final assetListResult = await useCaseAssetListRealm.execute();
+    if (assetListResult.isRight()) {
+      final right = assetListResult.asRight();
+      if (right.isEmpty) {
+        return null;
+      }
+      return await right.firstOrNull?.currentAsset();
+    }
+    return null;
+  }
+  String _convertToInternationalFormat(String mobileNumber) {
+  final numberWithoutLeadingZero =
+      mobileNumber.startsWith('0') ? mobileNumber.substring(1) : mobileNumber;
+
+  return '66$numberWithoutLeadingZero';
+}
+
+  bool conditionGetPackage(){
+    return false;
+  }
+  // end asset
 }
 
 class DateCoreNavigator {

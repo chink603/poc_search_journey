@@ -37,7 +37,8 @@ class SearchStep0 extends OdaStep {
       stream: context.read<LanguageCubit>().stream,
       builder: (context, asyncSnapshot) {
         if(searchBloc?.state is SearchStartState){
-            if(asyncSnapshot.data != null){
+           final currentState = searchBloc?.state as SearchStartState;
+            if(asyncSnapshot.data != null && currentState.searchKeywordList.isNotEmpty){
               final suggestedKeyword = CoreNavigator().suggestedKeyword(context, forceRouteName: arguments?['routeName'] ?? '');
               searchBloc?.add(ChangeLanguageEvent(language: asyncSnapshot.data!, suggestedKeyword: suggestedKeyword));
             }

@@ -305,15 +305,13 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
   Future<bool> conditionGetPackage(
       {required String rawNtype, required bool isLogin}) async {
     if (isLogin && rawNtype.isNotEmpty) {
+      final noCCI = rawNtype != 'CCI';
       final groupNType = await ntypeManagement.getGroupNType();
-      final isCCI = rawNtype == 'CCI';
-      final isIot = groupNType == NType.iot;
       final isAisMainGroup = switch (groupNType) {
-        NType.nonAis || NType.fibre => false,
+        NType.nonAis || NType.fibre || NType.iot => false,
         _ => true,
       };
-      final condition = isAisMainGroup && !isCCI && !isIot;
-      return condition;
+      return isAisMainGroup && noCCI;
     }
     return false;
   }

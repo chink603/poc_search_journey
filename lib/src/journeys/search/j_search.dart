@@ -27,6 +27,7 @@ class JourneySearch extends OdaJourney {
           coreData: CoreData(), 
           coreLanguage: context.odaCore.coreLanguage,
           routeName: arguments?['routeName'] ?? '',
+          suggestedKeyword: arguments?['suggestedKeyword'] ?? '',
         )..add(SearchStartEvent()),
       ),
     ];

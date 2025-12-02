@@ -33,6 +33,7 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
   final CoreData coreData;
   final OdaCoreLanguage coreLanguage;
   final String routeName;
+  List<String> suggestedKeyword;
   FullConfig? fullConfig;
 
   SearchBloc({
@@ -45,23 +46,24 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
     required this.coreData,
     required this.coreLanguage,
     required this.routeName,
+    required this.suggestedKeyword,
   }) : super(initialState: SearchInitialState()) {
     on<SearchStartEvent>((event, emit) {
       fullConfig ??= _getFullConfig();
       final distinctWord = _getDistinctWord(fullConfig: fullConfig!);
       final historySearch = _getHistorySearch();
-      final suggestKeywords = _getSuggestionSearch();
       emit(SearchStartState(
           searchText: '',
           searchKeywordList: distinctWord,
           searchHistory: historySearch,
-          suggestKeywords: suggestKeywords));
+          suggestKeywords: suggestedKeyword));
     });
     on<SearchLoadEvent>((event, emit) async {
       add(HistoryAddSearchEvent(searchText: event.searchText));
-      final asset = await _getAsset();
+
       if (event.checkRouteModel.type == CheckRouteEnum.none) {
         emit(SearchLoadingState(searchText: event.searchText));
+        final assetModel = await _getAsset();
         final result = await useCaseSearchFaq.call(
             input: event.searchText, language: coreLanguage.currentLanguage);
         await Future.delayed(const Duration(seconds: 2));
@@ -90,6 +92,16 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
     on<HistoryDeleteSearchEvent>((event, emit) async {
       await _deleteHistorySearch();
       add(SearchStartEvent());
+    });
+    on<ChangeLanguageEvent>((event, emit) async {
+      if(state is SearchStartState){
+        final currentState = state as SearchStartState;
+        if(currentState.searchKeywordList.isEmpty) return;
+        suggestedKeyword = event.suggestedKeyword;
+        emit(currentState.copyWith(
+          suggestKeywords: suggestedKeyword,
+        ));
+      }
     });
   }
 
@@ -193,86 +205,17 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
     return await coreData.variableStorage().removeKeyValue(historySearchKey);
   }
 
-  // suggestion keyword
-  List<String> _getSuggestionSearch() {
-    try {
-      return _getActiveForRoute(routeName) ?? [];
-    } catch (e) {
-      return [];
-    }
-  }
-
-  List<String>? _getActiveForRoute(String currentRoute) {
-    int index = 0;
-
-    while (true) {
-      final String basePath = 'suggestionKeywordConfig.$currentRoute.$index';
-      final String periodPath = '$basePath.period';
-      final String? resultPeriod =
-          coreConfiguration.getConfigByPath(periodPath);
-      if (resultPeriod == null) return null;
-
-      final isPeriodInRange = _isExpiredPeriod(resultPeriod);
-      if (isPeriodInRange) {
-        final String keywordAndLanguage =
-            '$basePath.keyword.${coreLanguage.currentLanguage}';
-        final List<dynamic>? resultSuggestion =
-            coreConfiguration.getConfigByPath(keywordAndLanguage);
-        if (resultSuggestion == null || resultSuggestion.isEmpty) {
-          CoreLog()
-              .info('CoreNavigator().suggestedKeyword(.) keywordValue is null');
-          return null;
-        }
-
-        final List<String> result = [];
-        result.addAll(
-          resultSuggestion
-              .map((e) => e is String ? e : e.toString())
-              .map((e) => e.trim())
-              .where((e) => e.isNotEmpty),
-        );
-        return result;
-      }
-      index++;
-    }
-  }
-
-  bool _isExpiredPeriod(String periodValue) {
-    final bool isPeriodInRange = _dateInRangeKeyword(periodValue);
-    return isPeriodInRange;
-  }
-
-  bool _dateInRangeKeyword(String period) {
-    final DateCoreNavigator date = _dateConfigToLocal(period);
-    final DateTime startDate = date.startDate!;
-    final DateTime endDate = date.endDate!;
-    final DateTime now = DateTime.now();
-    if (!(now.isAfter(startDate) && now.isBefore(endDate))) return false;
-    return true;
-  }
-
-  DateCoreNavigator _dateConfigToLocal(String dateConfig,
-      [bool onlyEndDate = false]) {
-    final List<String> preDate = dateConfig.split(" ");
-    if (onlyEndDate) {
-      final DateTime endDate = DateTime.parse("${preDate[1]}Z").toLocal();
-      return DateCoreNavigator.onlyEndDate(endDate: endDate);
-    }
-    final DateTime startDate = DateTime.parse("${preDate[0]}Z").toLocal();
-    final DateTime endDate = DateTime.parse("${preDate[1]}Z").toLocal();
-    return DateCoreNavigator(startDate: startDate, endDate: endDate);
-  }
-  //end start event handler
-
   //get asset for call data
   Future<SearchAssetModel> _getAsset() async {
-    final currentAsset = await _getCurrentAsset();
     final isLogin = ntypeManagement.isLogin();
+    if (!isLogin) {
+      return SearchAssetModel();
+    }
+    final currentAsset = await _getCurrentAsset();
     final rawNtype = await ntypeManagement.getRawNType() ?? '';
     final mobileNumber = await currentAsset.mobileNumber;
     final mobileNumberInternal = _convertToInternationalFormat(mobileNumber);
-    final isGetPackage =
-        await conditionGetPackage(rawNtype: rawNtype, isLogin: isLogin);
+    final isGetPackage = await conditionGetPackage(rawNtype: rawNtype);
 
     return SearchAssetModel(
         currentAsset: currentAsset,
@@ -303,8 +246,8 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
   }
 
   Future<bool> conditionGetPackage(
-      {required String rawNtype, required bool isLogin}) async {
-    if (isLogin && rawNtype.isNotEmpty) {
+      {required String rawNtype}) async {
+    if (rawNtype.isNotEmpty) {
       final noCCI = rawNtype != 'CCI';
       final groupNType = await ntypeManagement.getGroupNType();
       final isAisMainGroup = switch (groupNType) {

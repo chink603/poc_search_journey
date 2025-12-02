@@ -46,5 +46,14 @@ final class HistoryAddSearchEvent extends ODAPressedEvent {
   List<Object> get props => [searchText];
 }
 
+final class ChangeLanguageEvent extends ODAPressedEvent {
+  final String language;
+  final List<String> suggestedKeyword;
+
+  ChangeLanguageEvent({required this.language, required this.suggestedKeyword});
+
+  @override
+  List<Object> get props => [language, suggestedKeyword];
+}
 
 

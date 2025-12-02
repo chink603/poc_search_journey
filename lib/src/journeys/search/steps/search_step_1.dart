@@ -1,6 +1,8 @@
+import 'package:core/core.dart';
 import 'package:flutter_sticky_header/flutter_sticky_header.dart';
 import 'package:mya_ui_design/mya_ui_design.dart';
 import 'package:oda_fe_framework/oda_framework.dart';
+import 'package:oda_presentation_universal/oda_presentation_universal.dart';
 import '../bloc/bloc/search_bloc.dart';
 import '../config/j_search_config.dart';
 import '../models/models.dart';
@@ -24,7 +26,6 @@ class SearchStep0 extends OdaStep {
     searchBloc = null;
     super.dispose();
   }
-
   @override
   Widget builder(BuildContext context, Map<String, dynamic>? arguments) {
     if (!scrollController.hasClients) {
@@ -32,141 +33,152 @@ class SearchStep0 extends OdaStep {
     }
     searchBloc ??= context.read<SearchBloc>();
     final myaColors = context.myaThemeColors;
-    return ScaffoldMessenger(
-        key: scaffoldMessengerKey,
-        child: Scaffold(
-          backgroundColor: myaColors.bgBg,
-          resizeToAvoidBottomInset: false,
-          appBar: MyaHeaderNav(
-            key: SearchKeyUtil.compose(
-                pageKey: pageKey,
-                section: section,
-                components: [MyaHeaderNav.compType]),
-            isLeading: true,
-            isDivider: false,
-            onTapLeading: () {
-              notifyCallBackAction(context: context, payload: {
-                'exit': true,
-              });
-            },
-            headerText: context.lang(JSearchConfig.titleSearch),
-            trailingActions: [
-              ValueListenableBuilder<bool>(
-                  valueListenable: _isButtonVisible,
-                  builder: (context, value, child) {
-                    if (!value) return const SizedBox.shrink();
-                    return MyaButton(
-                      key: SearchKeyUtil.compose(
-                          pageKey: pageKey,
-                          section: section,
-                          components: [MyaButton.compType, 'goToTop']),
-                      label: context.lang(JSearchConfig.buttonGoToTop),
-                      theme: MyaButtonTheme.primary,
-                      style: MyaButtonStyle.text,
-                      size: MyaButtonSize.large,
-                      suffixIconKey: 'iconui_general_arrow_up',
-                      onPressed: () async {
-                        scrollController.animateTo(
-                          0,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      },
-                    );
-                  })
-            ],
-          ),
-          body: Container(
-            color: myaColors.bgBg,
-            child: NotificationListener(
-                onNotification: (ScrollNotification notification) {
-                  _isButtonVisible.value = notification.metrics.atEdge &&
-                      notification.metrics.pixels > 0;
-                  return false;
+    return StreamBuilder(
+      stream: context.read<LanguageCubit>().stream,
+      builder: (context, asyncSnapshot) {
+        if(searchBloc?.state is SearchStartState){
+            if(asyncSnapshot.data != null){
+              final suggestedKeyword = CoreNavigator().suggestedKeyword(context, forceRouteName: arguments?['routeName'] ?? '');
+              searchBloc?.add(ChangeLanguageEvent(language: asyncSnapshot.data!, suggestedKeyword: suggestedKeyword));
+            }
+        }
+        return ScaffoldMessenger(
+            key: scaffoldMessengerKey,
+            child: Scaffold(
+              backgroundColor: myaColors.bgBg,
+              resizeToAvoidBottomInset: false,
+              appBar: MyaHeaderNav(
+                key: SearchKeyUtil.compose(
+                    pageKey: pageKey,
+                    section: section,
+                    components: [MyaHeaderNav.compType]),
+                isLeading: true,
+                isDivider: false,
+                onTapLeading: () {
+                  notifyCallBackAction(context: context, payload: {
+                    'exit': true,
+                  });
                 },
-                child: CustomScrollView(
-                  controller: scrollController,
-                  physics: const ClampingScrollPhysics(),
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Container(
-                        color: myaColors.bgContainer,
-                        padding: const EdgeInsets.only(bottom: kPadding6),
-                        child: Stack(
-                          alignment: Alignment.topRight,
-                          children: [
-                            SearchInputField(
-                              key: SearchKeyUtil.compose(
-                                  pageKey: 'seach',
-                                  section: 'searchInputField',
-                                  components: ['rawAutocomplete']),
-                              onSelected: (String searchText) {
-                                _mangeSearch(context, searchText);
-                              },
-                              onEmpty: () {
-                                searchBloc?.add(SearchStartEvent());
-                              },
-                            ),
-                            BlocBuilder<SearchBloc, ODAState>(
-                              builder: (context, state) {
-                                if (state is SearchSuccessState) {
-                                  return _buildFilter(context, state);
-                                }
-                                return const SizedBox.shrink();
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    SliverStickyHeader.builder(
-                        builder: (context, state) =>
-                            BlocBuilder<SearchBloc, ODAState>(
-                              builder: (context, state) {
-                                if (state is SearchSuccessState) {
-                                  return _buildCategory(
-                                    context,
-                                    state.categories,
-                                    state.subCategories,
-                                  );
-                                }
-                                return Container(
-                                  decoration: BoxDecoration(
-                                      color: context.myaThemeColors.bgContainer,
-                                      border: MyaDividerBorder(context,
-                                          isShow: true)),
-                                );
-                              },
-                            ),
-                        sliver: BlocBuilder<SearchBloc, ODAState>(
-                            builder: (context, state) {
-                          if (state is SearchStartState) {
-                            // history and suggesttion
-                            return _buildHistoryAndSuggestion(
-                              context,
-                              state.searchHistory,
-                              state.suggestKeywords,
+                headerText: context.lang(JSearchConfig.titleSearch),
+                trailingActions: [
+                  ValueListenableBuilder<bool>(
+                      valueListenable: _isButtonVisible,
+                      builder: (context, value, child) {
+                        if (!value) return const SizedBox.shrink();
+                        return MyaButton(
+                          key: SearchKeyUtil.compose(
+                              pageKey: pageKey,
+                              section: section,
+                              components: [MyaButton.compType, 'goToTop']),
+                          label: context.lang(JSearchConfig.buttonGoToTop),
+                          theme: MyaButtonTheme.primary,
+                          style: MyaButtonStyle.text,
+                          size: MyaButtonSize.large,
+                          suffixIconKey: 'iconui_general_arrow_up',
+                          onPressed: () async {
+                            scrollController.animateTo(
+                              0,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
                             );
-                          }
-                          if (state is SearchLoadingState) {
-                            // loading
-                            return _buildLoading();
-                          }
-                          if (state is SearchSuccessState) {
-                            // result
-                            return _buildResult(context);
-                          }
-                          if (state is SearchErrorState) {
-                            // error
-                            return _buildError(context);
-                          }
-                          return const SliverToBoxAdapter(
-                              child: SizedBox.shrink());
-                        })),
-                  ],
-                )),
-          ),
-        ));
+                          },
+                        );
+                      })
+                ],
+              ),
+              body: Container(
+                color: myaColors.bgBg,
+                child: NotificationListener(
+                    onNotification: (ScrollNotification notification) {
+                      _isButtonVisible.value = notification.metrics.atEdge &&
+                          notification.metrics.pixels > 0;
+                      return false;
+                    },
+                    child: CustomScrollView(
+                      controller: scrollController,
+                      physics: const ClampingScrollPhysics(),
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: Container(
+                            color: myaColors.bgContainer,
+                            padding: const EdgeInsets.only(bottom: kPadding6),
+                            child: Stack(
+                              alignment: Alignment.topRight,
+                              children: [
+                                SearchInputField(
+                                  key: SearchKeyUtil.compose(
+                                      pageKey: 'seach',
+                                      section: 'searchInputField',
+                                      components: ['rawAutocomplete']),
+                                  onSelected: (String searchText) {
+                                    _mangeSearch(context, searchText);
+                                  },
+                                  onEmpty: () {
+                                    searchBloc?.add(SearchStartEvent());
+                                  },
+                                ),
+                                BlocBuilder<SearchBloc, ODAState>(
+                                  builder: (context, state) {
+                                    if (state is SearchSuccessState) {
+                                      return _buildFilter(context, state);
+                                    }
+                                    return const SizedBox.shrink();
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SliverStickyHeader.builder(
+                            builder: (context, state) =>
+                                BlocBuilder<SearchBloc, ODAState>(
+                                  builder: (context, state) {
+                                    if (state is SearchSuccessState) {
+                                      return _buildCategory(
+                                        context,
+                                        state.categories,
+                                        state.subCategories,
+                                      );
+                                    }
+                                    return Container(
+                                      decoration: BoxDecoration(
+                                          color: context.myaThemeColors.bgContainer,
+                                          border: MyaDividerBorder(context,
+                                              isShow: true)),
+                                    );
+                                  },
+                                ),
+                            sliver: BlocBuilder<SearchBloc, ODAState>(
+                                builder: (context, state) {
+                              if (state is SearchStartState) {
+                                // history and suggesttion
+                                return _buildHistoryAndSuggestion(
+                                  context,
+                                  state.searchHistory,
+                                  state.suggestKeywords,
+                                );
+                              }
+                              if (state is SearchLoadingState) {
+                                // loading
+                                return _buildLoading();
+                              }
+                              if (state is SearchSuccessState) {
+                                // result
+                                return _buildResult(context);
+                              }
+                              if (state is SearchErrorState) {
+                                // error
+                                return _buildError(context);
+                              }
+                              return const SliverToBoxAdapter(
+                                  child: SizedBox.shrink());
+                            })),
+                      ],
+                    )),
+              ),
+            ));
+      }
+    );
   }
 
   Widget _buildFilter(BuildContext context, state) {

@@ -15,7 +15,7 @@ dependencies:
   get_it: ^7.6.0
   flutter_sticky_header: ^0.8.0
   dartx: ^1.2.0
-
+  rxdart: ^0.28.0
   oda_data_tmf672_user_roles_permissions:
     git:
       url: "https://github.com/corp-ais/next-myais2-oda-data-tmf672-user-roles-permissions.git"

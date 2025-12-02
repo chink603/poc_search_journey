@@ -1,14 +1,19 @@
 import 'package:core/utils/ntype_management/ntype_management.dart';
-import 'package:oda_data_schema/main.core.export.dart';
+import 'package:oda_data_schema/main.core.export.dart'
+    hide LoyaltyProgramProductSpec;
+import 'package:oda_data_tmf658_loyalty_management/domain/domain.dart';
+import 'package:oda_data_tmf658_loyalty_management/enum/loyalty_category_config_key_enum.dart';
 import 'package:oda_data_tmf667_document_management/oda_data_tmf667_document_management.dart';
 import 'package:oda_data_tmf672_user_roles_permissions/utils/utils.dart';
 import 'package:oda_fe_framework/oda_framework.dart';
 import 'package:oda_presentation_universal/domain/customer_domain/usecase/get_assets_list_realm_usecase.dart';
 import 'package:oda_presentation_universal/utils/home/home_universal_utils.dart';
+import 'package:oda_presentation_universal/utils/smart_search.dart';
 import 'package:oda_search_micro_journey/src/journeys/search/models/models.dart';
 import 'package:core/utils/quick_menu_model.dart';
 import 'package:core/utils/quick_menu_management.dart';
 import 'package:oda_search_micro_journey/src/journeys/search/utils/util.dart';
+import 'package:rxdart/rxdart.dart';
 
 part 'search_event.dart';
 part 'search_state.dart';
@@ -24,7 +29,9 @@ typedef FullConfig = ({
 class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
   final String historySearchKey = 'searchHistoryKey';
   final SearchFaqsUsecase useCaseSearchFaq;
+  final SmartSearch useCaseSmartSearch;
   final GetAssetsListRealmUsecase useCaseAssetListRealm;
+  final GetLoyaltyCategoryConfigUseCase useCaseLoyaltyCategoryConfig;
 
   final CoreConfiguration coreConfiguration;
   final QuickMenuManagement quickMenuManagement;
@@ -39,10 +46,12 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
   SearchBloc({
     required super.context,
     required this.useCaseSearchFaq,
+    required this.useCaseSmartSearch,
     required this.coreConfiguration,
     required this.quickMenuManagement,
     required this.ntypeManagement,
     required this.useCaseAssetListRealm,
+    required this.useCaseLoyaltyCategoryConfig,
     required this.coreData,
     required this.coreLanguage,
     required this.routeName,
@@ -64,6 +73,9 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
       if (event.checkRouteModel.type == CheckRouteEnum.none) {
         emit(SearchLoadingState(searchText: event.searchText));
         final assetModel = await _getAsset();
+
+        final dataResult =
+            await _getData(assetModel, event.searchText.toLowerCase());
         final result = await useCaseSearchFaq.call(
             input: event.searchText, language: coreLanguage.currentLanguage);
         await Future.delayed(const Duration(seconds: 2));
@@ -94,9 +106,9 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
       add(SearchStartEvent());
     });
     on<ChangeLanguageEvent>((event, emit) async {
-      if(state is SearchStartState){
+      if (state is SearchStartState) {
         final currentState = state as SearchStartState;
-        if(currentState.searchKeywordList.isEmpty) return;
+        if (currentState.searchKeywordList.isEmpty) return;
         suggestedKeyword = event.suggestedKeyword;
         emit(currentState.copyWith(
           suggestKeywords: suggestedKeyword,
@@ -212,10 +224,14 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
       return SearchAssetModel();
     }
     final currentAsset = await _getCurrentAsset();
-    final rawNtype = await ntypeManagement.getRawNType() ?? '';
+    final rawNtype =
+        await ntypeManagement.getRawNType(currentAsset: currentAsset);
+    final groupNType =
+        await ntypeManagement.getGroupNType(currentAsset: currentAsset);
     final mobileNumber = await currentAsset.mobileNumber;
     final mobileNumberInternal = _convertToInternationalFormat(mobileNumber);
-    final isGetPackage = await conditionGetPackage(rawNtype: rawNtype);
+    final isGetPackage =
+        await conditionGetPackage(rawNtype: rawNtype, groupNType: groupNType);
 
     return SearchAssetModel(
         currentAsset: currentAsset,
@@ -246,25 +262,84 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
   }
 
   Future<bool> conditionGetPackage(
-      {required String rawNtype}) async {
-    if (rawNtype.isNotEmpty) {
-      final noCCI = rawNtype != 'CCI';
-      final groupNType = await ntypeManagement.getGroupNType();
-      final isAisMainGroup = switch (groupNType) {
-        NType.nonAis || NType.fibre || NType.iot => false,
-        _ => true,
-      };
-      return isAisMainGroup && noCCI;
-    }
-    return false;
+      {required String? rawNtype, required NType? groupNType}) async {
+    final noCCI = rawNtype != 'CCI';
+    final isAisMainGroup = switch (groupNType) {
+      NType.nonAis || NType.fibre || NType.iot => false,
+      _ => true,
+    };
+    return isAisMainGroup && noCCI;
   }
   // end asset
-}
 
-class DateCoreNavigator {
-  DateCoreNavigator({required this.startDate, required this.endDate});
-  DateCoreNavigator.onlyEndDate({required this.endDate});
+  // get data
+  Future<void> _getData(SearchAssetModel assetModel, String searchText) async {
+    final quickMenu = _getQuickMenu(searchText);
+    final dataResult = await Future.wait<dynamic>([
+      //get package
+      useCaseSmartSearch.searchPackage(
+          searchText, assetModel.mobileNumber, assetModel.mobileNumberInternal,
+          currentAsset: assetModel.currentAsset),
+      //get loyalty
+      _getLoyalty(searchText),
+      //get faq
+      useCaseSearchFaq.call(
+          input: searchText, language: coreLanguage.currentLanguage),
+    ]);
+    final packageResult = dataResult[0];
+    final loyaltyResult = dataResult[1];
+    // final faqResult = dataResult[2];
 
-  DateTime? startDate;
-  DateTime? endDate;
+    // useCaseSearchLoyalty.disposeStreamController();
+    print('test');
+  }
+
+  Future<void> _getCategory() async {
+    final categoryResult =
+        useCaseLoyaltyCategoryConfig.getLoyaltyFilterButton();
+    final subCategoryResult = useCaseLoyaltyCategoryConfig.call(
+        domainUsecase: DomainUsecase.homeSearch);
+  }
+
+  List<SearchQuickMenuMaster>? _getQuickMenu(String searchText) {
+    final config = fullConfig;
+    if (config == null) return null;
+
+    final categoryIds = <String>{};
+    for (final item in config.quickMenu) {
+      if (item.keyword.toLowerCase() == searchText) {
+        categoryIds.add(item.navigation.toString());
+      }
+    }
+
+    if (categoryIds.isEmpty) return null;
+
+    final selectedMenus = <SearchQuickMenuMaster>[];
+    for (final master in config.quickMenuMaster) {
+      if (categoryIds.contains(master.id)) {
+        selectedMenus.add(master);
+      }
+    }
+
+    return selectedMenus.isEmpty ? null : selectedMenus;
+  }
+
+  Future<CoreDataResult?> _getLoyalty(String searchText) async {
+    final SearchLoyaltyUsecase useCaseSearchLoyalty =
+        GetIt.I.get<SearchLoyaltyUsecase>();
+    useCaseSearchLoyalty.initCampaignState();
+    await Future.delayed(const Duration(milliseconds: 300));
+    useCaseSearchLoyalty.onTextChanged(searchText: searchText);
+    try {
+      final privilege = await useCaseSearchLoyalty.stream
+          .debounceTime(const Duration(milliseconds: 500))
+          .timeout(const Duration(seconds: 5))
+          .first;
+      useCaseSearchLoyalty.disposeStreamController();
+      return privilege;
+    } catch (e) {
+      useCaseSearchLoyalty.disposeStreamController();
+      return null;
+    }
+  }
 }

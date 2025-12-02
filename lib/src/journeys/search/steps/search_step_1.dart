@@ -1,8 +1,13 @@
 import 'package:core/core.dart';
+import 'package:core/utils/quick_menu_management.dart';
 import 'package:flutter_sticky_header/flutter_sticky_header.dart';
 import 'package:mya_ui_design/mya_ui_design.dart';
+import 'package:oda_data_tmf658_loyalty_management/domain/domain.dart';
+import 'package:oda_data_tmf667_document_management/domain/domain.dart';
 import 'package:oda_fe_framework/oda_framework.dart';
+import 'package:oda_presentation_universal/domain/customer_domain/usecase/get_assets_list_realm_usecase.dart';
 import 'package:oda_presentation_universal/oda_presentation_universal.dart';
+import 'package:oda_presentation_universal/utils/smart_search.dart';
 import '../bloc/bloc/search_bloc.dart';
 import '../config/j_search_config.dart';
 import '../models/models.dart';
@@ -22,9 +27,30 @@ class SearchStep0 extends OdaStep {
   @override
   void dispose() {
     scrollController.dispose();
-    searchBloc?.close();
     searchBloc = null;
     super.dispose();
+  }
+   @override
+  List<BlocProvider<OdaBloc<ODAEvent, ODAState>>> createBlocProviders(
+      BuildContext context, Map<String, dynamic>? arguments) {
+    return [
+      BlocProvider<SearchBloc>(
+        create: (context) => SearchBloc(
+          context: context,
+          useCaseSearchFaq: GetIt.I.get<SearchFaqsUsecase>(),
+          useCaseAssetListRealm: GetIt.I.get<GetAssetsListRealmUsecase>(),
+          useCaseLoyaltyCategoryConfig: GetIt.I.get<GetLoyaltyCategoryConfigUseCase>(),
+          useCaseSmartSearch: GetIt.I.get<SmartSearch>(),
+          coreConfiguration: CoreConfiguration(),
+          quickMenuManagement: QuickMenuManagement(),
+          ntypeManagement: NTypeManagement(),
+          coreData: CoreData(), 
+          coreLanguage: context.odaCore.coreLanguage,
+          routeName: arguments?['routeName'] ?? '',
+          suggestedKeyword: arguments?['suggestedKeyword'] ?? [],
+        )..add(SearchStartEvent()),
+      ),
+    ];
   }
   @override
   Widget builder(BuildContext context, Map<String, dynamic>? arguments) {

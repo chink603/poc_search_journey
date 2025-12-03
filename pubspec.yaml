@@ -15,6 +15,7 @@ dependencies:
   get_it: ^7.6.0
   flutter_sticky_header: ^0.8.0
   dartx: ^1.2.0
+  dartz: ^0.10.1
   rxdart: ^0.28.0
   oda_data_tmf672_user_roles_permissions:
     git:

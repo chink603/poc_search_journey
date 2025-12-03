@@ -31,9 +31,8 @@ final class SearchLoadingState extends ODALoadingState{
 }
 
 final class SearchSuccessState extends ODASuccessState{
-  final List<SearchCategoryModel> categories;
-  final List<SearchCategoryModel> subCategories;
-  SearchSuccessState({required this.categories, required this.subCategories});
+  final SearchResultModel result;
+  SearchSuccessState({required this.result});
 }
 
 final class SearchErrorState extends ODAFailureState{}

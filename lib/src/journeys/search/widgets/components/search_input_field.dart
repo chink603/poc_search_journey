@@ -43,10 +43,10 @@ class _SearchInputFieldState extends State<SearchInputField> {
 
     return BlocConsumer<SearchBloc, ODAState>(
       listener: (context, state) {
-        if(state is SearchStartState){
+        if (state is SearchStartState) {
           searchTextController.text = state.searchText;
         }
-        if(state is SearchLoadingState){
+        if (state is SearchLoadingState) {
           searchTextController.text = state.searchText;
         }
       },
@@ -83,36 +83,95 @@ class _SearchInputFieldState extends State<SearchInputField> {
               FocusNode focusNode2,
               VoidCallback onFieldSubmitted,
             ) {
-              return BlocSelector<SearchBloc, ODAState, double>(
-                selector: (state) {
-                  return state is SearchSuccessState ? 52.0 : kPadding7;
-                },
-                builder: (context, paddingValue) {
-                  return Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      kPadding7,
-                      kPadding1,
-                      paddingValue,
-                      kPadding6,
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        kPadding7,
+                        kPadding1,
+                        kPadding1,
+                        kPadding6,
+                      ),
+                      child: MyaInputFieldSearch(
+                          key: const ValueKey(
+                              'myaisCommonSearch/headerNavigation/${MyaInputFieldSearch.compType}/inputSearch'),
+                          hintText: context.lang('search_hint_text'),
+                          borderRadius: kRadius8,
+                          isSuccess: false,
+                          controller: searchController,
+                          focusNode: focusNode2,
+                          onTapOutside: (_) => focusNode2.unfocus(),
+                          onFieldSubmitted: (String searchText) {
+                            if (searchText.replaceAll(" ", "") != "") {
+                              widget.onSelected(searchText);
+                            } else {
+                              widget.onEmpty();
+                            }
+                          }),
                     ),
-                    child: MyaInputFieldSearch(
+                  ),
+                  BlocBuilder<SearchBloc, ODAState>(
+                    buildWhen: (previous, current) => current is! SearchLoadingState,
+                    builder: (context, state) {
+                      if(state is! SearchSuccessState){
+                        return const SizedBox(width: kPadding7);
+                      }
+                      return MyaBadgeNotification(
                         key: const ValueKey(
-                            'myaisCommonSearch/headerNavigation/${MyaInputFieldSearch.compType}/inputSearch'),
-                        hintText: context.lang('search_hint_text'),
-                        borderRadius: kRadius8,
-                        isSuccess: false,
-                        controller: searchController,
-                        focusNode: focusNode2,
-                        onTapOutside: (_) => focusNode2.unfocus(),
-                        onFieldSubmitted: (String searchText) {
-                          if (searchText.replaceAll(" ", "") != "") {
-                            widget.onSelected(searchText);
-                          } else {
-                            widget.onEmpty();
-                          }
-                        }),
-                  );
-                },
+                            'myaisCommonSearch/headerNavigation/${MyaBadgeNotification.compType}/notificationFilter'),
+                        widget: MyaButtonIcon(
+                          key: const ValueKey(
+                              'myaisCommonSearch/headerNavigation/${MyaButtonIcon.compType}/filterButton'),
+                          style: MyaButtonIconStyle.iconOnly,
+                          iconKey: 'iconui_general_filter',
+                          isDisabled: state is! SearchSuccessState,
+                          onPressed: () {
+                            final List<MyaBottomSheetFilterContent>
+                                filterContent = [];
+                            myaShowBottomSheet(
+                              context: context,
+                              enableDrag: true,
+                              isDismissible: true,
+                              widget: StatefulBuilder(
+                                builder: (ctx, setState) {
+                                  return MyaBottomSheetFilter(
+                                    key: const ValueKey(
+                                        'myaisCommonSearch/aroundYouFilter/${MyaBottomSheetFilter.compType}'),
+                                    onPressedIconClose: () =>
+                                        Navigator.of(context).pop(),
+                                    isShowCloseIcon: true,
+                                    isDragHandle: true,
+                                    showStickyButton: true,
+                                    stateResetButton: true,
+                                    showScrollBars: true,
+                                    selectButtonText: context
+                                        .lang('home_search_confirm_botton'),
+                                    resetButtonText: context
+                                        .lang('home_search_reset_button'),
+                                    resetButtonStyle: MyaButtonStyle.outlined,
+                                    onSelectButton: () {},
+                                    onResetButton: () {},
+                                    onClose: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                    contents: filterContent,
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                        positionedRight: 8,
+                        positionedTop: 10,
+                        isShowBadge: false,
+                        badgeType: MyaBadgeType.dot,
+                        padding: const EdgeInsets.only(right: kPadding4),
+                      );
+                    },
+                  )
+                ],
               );
             },
             // Function Search Suggestion

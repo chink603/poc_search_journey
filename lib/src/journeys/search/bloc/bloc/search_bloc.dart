@@ -14,7 +14,7 @@ import 'package:core/utils/quick_menu_model.dart';
 import 'package:core/utils/quick_menu_management.dart';
 import 'package:oda_search_micro_journey/src/journeys/search/utils/util.dart';
 import 'package:rxdart/rxdart.dart';
-
+import 'package:dartz/dartz.dart';
 part 'search_event.dart';
 part 'search_state.dart';
 
@@ -27,22 +27,6 @@ typedef FullConfig = ({
 });
 
 class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
-  final String historySearchKey = 'searchHistoryKey';
-  final SearchFaqsUsecase useCaseSearchFaq;
-  final SmartSearch useCaseSmartSearch;
-  final GetAssetsListRealmUsecase useCaseAssetListRealm;
-  final GetLoyaltyCategoryConfigUseCase useCaseLoyaltyCategoryConfig;
-
-  final CoreConfiguration coreConfiguration;
-  final QuickMenuManagement quickMenuManagement;
-  final NTypeManagement ntypeManagement;
-
-  final CoreData coreData;
-  final OdaCoreLanguage coreLanguage;
-  final String routeName;
-  List<String> suggestedKeyword;
-  FullConfig? fullConfig;
-
   SearchBloc({
     required super.context,
     required this.useCaseSearchFaq,
@@ -73,20 +57,12 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
       if (event.checkRouteModel.type == CheckRouteEnum.none) {
         emit(SearchLoadingState(searchText: event.searchText));
         final assetModel = await _getAsset();
-
         final dataResult =
             await _getData(assetModel, event.searchText.toLowerCase());
-        final result = await useCaseSearchFaq.call(
-            input: event.searchText, language: coreLanguage.currentLanguage);
-        await Future.delayed(const Duration(seconds: 2));
-        if (result.isLeft()) {
-          emit(SearchErrorState());
-        }
-        if (result.isRight()) {
-          emit(SearchSuccessState(categories: const [
-            SearchCategoryModel(id: '1', label: 'test', value: true),
-          ], subCategories: const []));
-        }
+        dataResult.fold(
+          (l) => emit(SearchErrorState()),
+          (r) => emit(SearchSuccessState(result: r)),
+        );
       }
     });
     on<SearchPressedEvent>((event, emit) {});
@@ -115,6 +91,30 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
         ));
       }
     });
+  }
+
+  final CoreConfiguration coreConfiguration;
+  final CoreData coreData;
+  final OdaCoreLanguage coreLanguage;
+  FullConfig? fullConfig;
+  final String historySearchKey = 'searchHistoryKey';
+  final NTypeManagement ntypeManagement;
+  final QuickMenuManagement quickMenuManagement;
+  final String routeName;
+  List<String> suggestedKeyword;
+  final GetAssetsListRealmUsecase useCaseAssetListRealm;
+  final GetLoyaltyCategoryConfigUseCase useCaseLoyaltyCategoryConfig;
+  final SearchFaqsUsecase useCaseSearchFaq;
+  final SmartSearch useCaseSmartSearch;
+
+  Future<bool> conditionGetPackage(
+      {required String? rawNtype, required NType? groupNType}) async {
+    final noCCI = rawNtype != 'CCI';
+    final isAisMainGroup = switch (groupNType) {
+      NType.nonAis || NType.fibre || NType.iot => false,
+      _ => true,
+    };
+    return isAisMainGroup && noCCI;
   }
 
   //start event handler
@@ -261,49 +261,129 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
     return '66$numberWithoutLeadingZero';
   }
 
-  Future<bool> conditionGetPackage(
-      {required String? rawNtype, required NType? groupNType}) async {
-    final noCCI = rawNtype != 'CCI';
-    final isAisMainGroup = switch (groupNType) {
-      NType.nonAis || NType.fibre || NType.iot => false,
-      _ => true,
-    };
-    return isAisMainGroup && noCCI;
-  }
   // end asset
 
   // get data
-  Future<void> _getData(SearchAssetModel assetModel, String searchText) async {
-    final quickMenu = _getQuickMenu(searchText);
-    final dataResult = await Future.wait<dynamic>([
-      //get package
-      useCaseSmartSearch.searchPackage(
-          searchText, assetModel.mobileNumber, assetModel.mobileNumberInternal,
-          currentAsset: assetModel.currentAsset),
-      //get loyalty
-      _getLoyalty(searchText),
-      //get faq
-      useCaseSearchFaq.call(
-          input: searchText, language: coreLanguage.currentLanguage),
-    ]);
-    final packageResult = dataResult[0];
-    final loyaltyResult = dataResult[1];
-    // final faqResult = dataResult[2];
-
-    // useCaseSearchLoyalty.disposeStreamController();
-    print('test');
+  Future<Either<SearchResultModel?, SearchResultModel>> _getData(
+      SearchAssetModel assetModel, String searchText) async {
+    try {
+      final dataResult = await Future.wait<dynamic>([
+        assetModel.isGetPackage
+            ? useCaseSmartSearch.searchPackage(searchText,
+                assetModel.mobileNumber, assetModel.mobileNumberInternal,
+                currentAsset: assetModel.currentAsset)
+            : Future.value(),
+        _getPrivilege(searchText),
+        useCaseSearchFaq.call(
+            input: searchText, language: coreLanguage.currentLanguage),
+      ]);
+      final packageResult = dataResult[0] is List<ProductOffering>
+          ? dataResult[0] as List<ProductOffering>
+          : <ProductOffering>[];
+      final privilegeResult =
+          dataResult[1] is CoreDataResult ? dataResult[1] : null;
+      final eitherFaq =
+          dataResult[2] as Either<DocumentFailure, List<DocumentEntity>>;
+      final List<DocumentEntity> faqResult = eitherFaq.getOrElse(() => []);
+      final quickMenuResult = _getQuickMenu(searchText);
+      final result = SearchResultModel(
+        quickMenuList: quickMenuResult.isNotEmpty ? quickMenuResult : null,
+        packageList: packageResult.isNotEmpty ? packageResult : null,
+        privilegeList: privilegeResult,
+        faqList: faqResult.isNotEmpty ? faqResult : null,
+      );
+      if (result.isEmpty()) {
+        return const Left(null);
+      }
+      final category = _getCategory(result);
+      final subCategory = _getSubCategory(result);
+      final filter = _getFilter(result);
+      return Right(result.copyWith(
+          categoryList: category,
+          subCategoryList: subCategory,
+          filterList: filter));
+    } catch (e) {
+      return const Left(null);
+    }
   }
 
-  Future<void> _getCategory() async {
-    final categoryResult =
-        useCaseLoyaltyCategoryConfig.getLoyaltyFilterButton();
-    final subCategoryResult = useCaseLoyaltyCategoryConfig.call(
-        domainUsecase: DomainUsecase.homeSearch);
+  List<SearchCategoryModel> _getCategory(SearchResultModel result) {
+    final List<SearchCategoryModel> categoryList = [];
+    if (result.quickMenuList != null) {
+      categoryList.add(_getCategoryModel(
+        id: CategoryType.quickMenu.name,
+        label: CategoryType.quickMenu.label,
+        icon: CategoryType.quickMenu.icon,
+      ));
+    }
+    if (result.packageList != null) {
+      categoryList.add(_getCategoryModel(
+        id: CategoryType.package.name,
+        label: CategoryType.package.label,
+        icon: CategoryType.package.icon,
+      ));
+    }
+    if (result.privilegeList != null) {
+      categoryList.add(_getCategoryModel(
+          id: CategoryType.privilege.name,
+          label: CategoryType.privilege.label,
+          icon: CategoryType.privilege.icon));
+    }
+    if (result.faqList != null) {
+      categoryList.add(_getCategoryModel(
+        id: CategoryType.faq.name,
+        label: CategoryType.faq.label,
+        icon: CategoryType.faq.icon,
+      ));
+    }
+    return categoryList;
   }
 
-  List<SearchQuickMenuMaster>? _getQuickMenu(String searchText) {
+  SearchCategoryModel _getCategoryModel(
+      {required String id,
+      required String icon,
+      required String label,
+      bool? value}) {
+    return SearchCategoryModel(
+      id: id,
+      label: label,
+      icon: icon,
+      value: value ?? false,
+    );
+  }
+
+  Map<CategoryType, List<SearchCategoryModel>>? _getSubCategory(
+      SearchResultModel result) {
+    final Map<CategoryType, List<SearchCategoryModel>> subCategoryMap = {};
+    if (result.privilegeList != null) {
+      final subCategoryResult = useCaseLoyaltyCategoryConfig.call(
+          domainUsecase: DomainUsecase.homeSearch);
+      final subCategoryList = subCategoryResult
+          .map((e) => SearchCategoryModel.fromEntityPrivilegeSubCategory(e))
+          .toList();
+      subCategoryMap[CategoryType.privilege] = subCategoryList;
+    }
+    return subCategoryMap.isNotEmpty ? subCategoryMap : null;
+  }
+
+  Map<CategoryType, List<SearchCategoryModel>>? _getFilter(
+      SearchResultModel result) {
+    final Map<CategoryType, List<SearchCategoryModel>> filterMap = {};
+    if (result.privilegeList != null) {
+      final filterPrivilege =
+          useCaseLoyaltyCategoryConfig.getLoyaltyFilterButton();
+      final filterPrivilegeList = filterPrivilege
+          .map((e) => SearchCategoryModel.fromEntityPrivilegeFilter(e))
+          .toList();
+      filterMap[CategoryType.privilege] = filterPrivilegeList;
+    }
+
+    return filterMap.isNotEmpty ? filterMap : null;
+  }
+
+  List<SearchQuickMenuMaster> _getQuickMenu(String searchText) {
     final config = fullConfig;
-    if (config == null) return null;
+    if (config == null) return [];
 
     final categoryIds = <String>{};
     for (final item in config.quickMenu) {
@@ -312,7 +392,7 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
       }
     }
 
-    if (categoryIds.isEmpty) return null;
+    if (categoryIds.isEmpty) return [];
 
     final selectedMenus = <SearchQuickMenuMaster>[];
     for (final master in config.quickMenuMaster) {
@@ -321,10 +401,10 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
       }
     }
 
-    return selectedMenus.isEmpty ? null : selectedMenus;
+    return selectedMenus;
   }
 
-  Future<CoreDataResult?> _getLoyalty(String searchText) async {
+  Future<CoreDataResult?> _getPrivilege(String searchText) async {
     final SearchLoyaltyUsecase useCaseSearchLoyalty =
         GetIt.I.get<SearchLoyaltyUsecase>();
     useCaseSearchLoyalty.initCampaignState();
@@ -336,7 +416,7 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
           .timeout(const Duration(seconds: 5))
           .first;
       useCaseSearchLoyalty.disposeStreamController();
-      return privilege;
+      return privilege.isNotEmpty ? privilege : null;
     } catch (e) {
       useCaseSearchLoyalty.disposeStreamController();
       return null;

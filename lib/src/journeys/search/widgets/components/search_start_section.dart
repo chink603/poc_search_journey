@@ -5,8 +5,8 @@ import 'package:oda_search_micro_journey/src/journeys/search/utils/util.dart';
 import '../../models/models.dart';
 import '../widgets.dart';
 
-class SearchHistorySuggest extends StatelessWidget {
-  const SearchHistorySuggest({
+class SearchStartSection extends StatelessWidget {
+  const SearchStartSection({
     super.key,
     required this.searchHistory,
     required this.suggestKeywords,

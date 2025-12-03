@@ -6,9 +6,9 @@ export 'help_and_support_results.dart';
 export 'package_results.dart';
 export 'privilege_results.dart';
 export 'quick_menu_results.dart';
-export 'search_history_suggest.dart';
-export 'search_input_field.dart';
-
+export 'search_start_section.dart';
+export 'search_input_section.dart';
+export 'search_category_section.dart';
 
 
 

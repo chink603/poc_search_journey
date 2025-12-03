@@ -4,8 +4,8 @@ import 'package:oda_search_micro_journey/src/journeys/search/bloc/bloc.dart';
 
 import '../../utils/util.dart';
 
-class SearchInputField extends StatefulWidget {
-  const SearchInputField({
+class SearchInputSection extends StatefulWidget {
+  const SearchInputSection({
     super.key,
     required this.onSelected,
     required this.onEmpty,
@@ -15,10 +15,10 @@ class SearchInputField extends StatefulWidget {
   final VoidCallback onEmpty;
 
   @override
-  State<SearchInputField> createState() => _SearchInputFieldState();
+  State<SearchInputSection> createState() => _SearchInputSectionState();
 }
 
-class _SearchInputFieldState extends State<SearchInputField> {
+class _SearchInputSectionState extends State<SearchInputSection> {
   final TextEditingController searchTextController = TextEditingController();
   final FocusNode focusNode = FocusNode();
 
@@ -57,7 +57,7 @@ class _SearchInputFieldState extends State<SearchInputField> {
         return RawAutocomplete<String>(
             key: SearchKeyUtil.compose(
                 pageKey: 'seach',
-                section: 'searchInputField',
+                section: 'SearchInputSection',
                 components: ['rawAutocomplete']),
             focusNode: focusNode,
             textEditingController: searchTextController,

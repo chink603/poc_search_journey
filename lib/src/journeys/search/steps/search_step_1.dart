@@ -8,9 +8,9 @@ import 'package:oda_fe_framework/oda_framework.dart';
 import 'package:oda_presentation_universal/domain/customer_domain/usecase/get_assets_list_realm_usecase.dart';
 import 'package:oda_presentation_universal/oda_presentation_universal.dart';
 import 'package:oda_presentation_universal/utils/smart_search.dart';
+import 'package:oda_search_micro_journey/src/journeys/search/widgets/components/search_result_section.dart';
 import '../bloc/bloc/search_bloc.dart';
 import '../config/j_search_config.dart';
-import '../models/models.dart';
 import '../utils/util.dart';
 import '../widgets/widgets.dart';
 
@@ -137,7 +137,7 @@ class SearchStep0 extends OdaStep {
                               color: myaColors.bgContainer,
                               padding: const EdgeInsets.only(bottom: kPadding6),
                               child: Stack(children: [
-                                SearchInputField(
+                                SearchInputSection(
                                   key: SearchKeyUtil.compose(
                                       pageKey: 'seach',
                                       section: 'searchInputField',
@@ -157,12 +157,11 @@ class SearchStep0 extends OdaStep {
                                   BlocBuilder<SearchBloc, ODAState>(
                                     builder: (context, state) {
                                       if (state is SearchSuccessState) {
-                                        return Container();
-                                        // return _buildCategory(
-                                        //   context,
-                                        //   state.categories,
-                                        //   state.subCategories,
-                                        // );
+                                        return SearchCategorySection(
+                                            categories:
+                                                state.result.categoryList,
+                                            subCategories:
+                                                state.result.subCategoryList);
                                       }
                                       return Container(
                                         decoration: BoxDecoration(
@@ -173,31 +172,76 @@ class SearchStep0 extends OdaStep {
                                       );
                                     },
                                   ),
-                              sliver: BlocBuilder<SearchBloc, ODAState>(
-                                  builder: (context, state) {
-                                if (state is SearchStartState) {
-                                  // history and suggesttion
-                                  return _buildHistoryAndSuggestion(
-                                    context,
-                                    state.searchHistory,
-                                    state.suggestKeywords,
-                                  );
-                                }
-                                if (state is SearchLoadingState) {
-                                  // loading
-                                  return _buildLoading();
-                                }
-                                if (state is SearchSuccessState) {
-                                  // result
-                                  return _buildResult(context);
-                                }
-                                if (state is SearchErrorState) {
-                                  // error
-                                  return _buildError(context);
-                                }
-                                return const SliverToBoxAdapter(
-                                    child: SizedBox.shrink());
-                              })),
+                              sliver: SliverToBoxAdapter(
+                                child: BlocBuilder<SearchBloc, ODAState>(
+                                    builder: (context, state) {
+                                  if (state is SearchStartState) {
+                                    return SearchStartSection(
+                                      searchHistory: state.searchHistory,
+                                      suggestKeywords: state.suggestKeywords,
+                                      onPressed: (String searchText) {
+                                        _mangeSearch(context, searchText);
+                                      },
+                                      onClear: () {
+                                        searchBloc
+                                            ?.add(HistoryDeleteSearchEvent());
+                                        scaffoldMessengerKey.currentState
+                                            ?.showSnackBar(
+                                          SnackBar(
+                                            backgroundColor: Colors.transparent,
+                                            elevation: 0,
+                                            content: MyaToast(
+                                              key: SearchKeyUtil.compose(
+                                                  pageKey: pageKey,
+                                                  section:
+                                                      'alertRecentSearchAreCleared',
+                                                  components: [
+                                                    MyaToast.compType
+                                                  ]),
+                                              toastStyle: MyaToastStyle.success,
+                                              prefixIcon:
+                                                  'iconui_general_success',
+                                              descriptionText: context
+                                                  .lang(
+                                                      'search_alert_recent_cleared')
+                                                  .langEmpty,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      onCancel: () {
+                                        // add event log
+                                      },
+                                    );
+                                  }
+                                  if (state is SearchLoadingState) {
+                                    return const Padding(
+                                      padding: EdgeInsets.only(top: kPadding9),
+                                      child: MyaLoadingSpinner(),
+                                    );
+                                  }
+                                  if (state is SearchSuccessState) {
+                                    return const SearchResultSection();
+                                  }
+                                  if (state is SearchErrorState) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 90),
+                                      child: MyaEmptyStates(
+                                        key: SearchKeyUtil.compose(
+                                            pageKey: 'myaisCommonSearch',
+                                            section: 'searchNotFound',
+                                            components: [
+                                              MyaEmptyStates.compType
+                                            ]),
+                                        imageKey: "image_illus_not_found",
+                                        titleText: context.lang(
+                                            'myasset_keyword_not_matches'),
+                                      ),
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                }),
+                              )),
                         ],
                       )),
                 ),
@@ -205,104 +249,7 @@ class SearchStep0 extends OdaStep {
         });
   }
 
-  Widget _buildHistoryAndSuggestion(
-    BuildContext context,
-    List<String> searchHistory,
-    List<String> suggestKeywords,
-  ) {
-    return SliverToBoxAdapter(
-        child: SearchHistorySuggest(
-      searchHistory: searchHistory,
-      suggestKeywords: suggestKeywords,
-      onPressed: (String searchText) {
-        _mangeSearch(context, searchText);
-      },
-      onClear: () {
-        searchBloc?.add(HistoryDeleteSearchEvent());
-        scaffoldMessengerKey.currentState?.showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            content: MyaToast(
-              key: SearchKeyUtil.compose(
-                  pageKey: pageKey,
-                  section: 'alertRecentSearchAreCleared',
-                  components: [MyaToast.compType]),
-              toastStyle: MyaToastStyle.success,
-              prefixIcon: 'iconui_general_success',
-              descriptionText:
-                  context.lang('search_alert_recent_cleared').langEmpty,
-            ),
-          ),
-        );
-      },
-      onCancel: () {
-        // add event log
-      },
-    ));
-  }
 
-  Widget _buildCategory(
-      BuildContext context,
-      List<SearchCategoryModel> categories,
-      List<SearchCategoryModel> subCategories) {
-    return Container(
-      decoration: BoxDecoration(
-          color: context.myaThemeColors.bgContainer,
-          border: MyaDividerBorder(context, isShow: true)),
-      padding: EdgeInsets.fromLTRB(kPadding7, kPadding1, kPadding7,
-          categories.isNotEmpty ? kPadding4 : kPadding1),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (categories.isNotEmpty)
-            ListChipFilter(
-                list: categories,
-                onTap: (String label) {
-                  // if (state.categories.length > 1) {
-                  //   context
-                  //       .read<NewSearchMainBloc>()
-                  //       .add(SearchSelectedChipEvent(label));
-                  // }
-                }),
-          if (subCategories.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: kPadding4),
-              child:
-                  ListChipFilter(list: subCategories, onTap: (String label) {}),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildResult(BuildContext context) {
-    return SliverToBoxAdapter(child: Container());
-  }
-
-  Widget _buildError(BuildContext context) {
-    return SliverToBoxAdapter(
-        child: Container(
-      padding: const EdgeInsets.only(top: 90),
-      child: MyaEmptyStates(
-        key: SearchKeyUtil.compose(
-            pageKey: 'myaisCommonSearch',
-            section: 'searchNotFound',
-            components: [MyaEmptyStates.compType]),
-        imageKey: "image_illus_not_found",
-        titleText: context.lang('myasset_keyword_not_matches'),
-      ),
-    ));
-  }
-
-  Widget _buildLoading() {
-    return const SliverToBoxAdapter(
-      child: Padding(
-        padding: EdgeInsets.only(top: kPadding9),
-        child: MyaLoadingSpinner(),
-      ),
-    );
-  }
 
   void _mangeSearch(BuildContext context, String searchText) {
     final getFullConfig = searchBloc?.fullConfig;

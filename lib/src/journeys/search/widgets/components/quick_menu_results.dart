@@ -12,15 +12,18 @@ class QuickMenuResults extends StatelessWidget {
     required this.onTapViewAll,
     required this.data,
     required this.onTapCard,
+    required this.isViewAll,
   });
 
   final bool isSelected;
+  final bool isViewAll;
   final VoidCallback onTapViewAll;
-  final List<SearchQuickMenuModel> data;
+  final List<SearchQuickMenuMaster> data;
   final Function(int index) onTapCard;
 
   @override
   Widget build(BuildContext context) {
+    if (!isSelected && !isViewAll) return const SliverToBoxAdapter(child: SizedBox.shrink());
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: kPadding7),
       sliver: SliverMainAxisGroup(

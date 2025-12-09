@@ -1,4 +1,3 @@
-
 import 'package:mya_ui_design/mya_ui_design.dart';
 import 'package:oda_fe_framework/oda_framework.dart';
 
@@ -8,44 +7,73 @@ import 'components.dart';
 
 class SearchCategorySection extends StatefulWidget {
   const SearchCategorySection(
-      {super.key, required this.categories, required this.subCategories});
+      {super.key,
+      required this.categories,
+      required this.subCategories,
+      required this.onTapCategory,
+      required this.onTapSubCategory});
 
   final List<SearchCategoryModel>? categories;
   final Map<CategoryType, List<SearchCategoryModel>>? subCategories;
+  final Function(SearchCategoryModel model) onTapCategory;
+  final Function(SearchCategoryModel model) onTapSubCategory;
 
   @override
   State<SearchCategorySection> createState() => _SearchCategorySectionState();
 }
 
 class _SearchCategorySectionState extends State<SearchCategorySection> {
+  List<SearchCategoryModel> categories = [];
+  List<SearchCategoryModel> subCategories = [];
+  Map<CategoryType, List<SearchCategoryModel>>? stampSubCategories;
+  @override
+  void initState() {
+    super.initState();
+    categories = widget.categories ?? [];
+    stampSubCategories = widget.subCategories;
+    if (categories.length == 1) {
+      categories = categories.map((e) => e.copyWith(value: true)).toList();
+      subCategories = stampSubCategories?[categories.first.type] ?? [];
+    }
+  }
+
+  void _updateSubCategories(String label) {
+    final index = categories.indexWhere((e) => e.label == label);
+    if (index == -1) return;
+    final type = categories[index].type;
+    subCategories =
+        subCategories.isNotEmpty ? [] : stampSubCategories?[type] ?? [];
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
-    if(widget.categories == null) return const SizedBox.shrink();
     return Container(
       decoration: BoxDecoration(
           color: context.myaThemeColors.bgContainer,
           border: MyaDividerBorder(context, isShow: true)),
       padding: EdgeInsets.fromLTRB(kPadding7, kPadding1, kPadding7,
-          widget.categories!.isNotEmpty ? kPadding4 : kPadding1),
+          categories.isNotEmpty ? kPadding4 : kPadding1),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (widget.categories!.isNotEmpty)
+          if (categories.isNotEmpty)
             ListChipFilter(
-                list: widget.categories!,
-                onTap: (String label) {
-                  // if (state.categories.length > 1) {
-                  //   context
-                  //       .read<NewSearchMainBloc>()
-                  //       .add(SearchSelectedChipEvent(label));
-                  // }
+                list: categories,
+                onTap: (SearchCategoryModel model) {
+                  widget.onTapCategory(model);
+                  _updateSubCategories(model.label);
                 }),
-          // if (widget.subCategories != null)
-          //   Padding(
-          //     padding: const EdgeInsets.only(top: kPadding4),
-          //     child: ListChipFilter(
-          //         list: widget.subCategories, onTap: (String label) {}),
-          //   ),
+          if (subCategories.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: kPadding4),
+              child: ListChipFilter(
+                list: subCategories,
+                onTap: (SearchCategoryModel model) {
+                  widget.onTapSubCategory(model);
+                },
+              ),
+            ),
         ],
       ),
     );

@@ -1,15 +1,18 @@
 part of 'search_bloc.dart';
 
-final class SearchInitialState extends ODAInitialState{}
+final class SearchInitialState extends ODAInitialState {}
 
-final class SearchStartState extends ODAInitialState{
+final class SearchStartState extends ODAInitialState {
   final String searchText;
   final List<String> searchKeywordList;
   final List<String> searchHistory;
   final List<String> suggestKeywords;
-  SearchStartState({required this.searchText, required this.searchKeywordList, required this.searchHistory, required this.suggestKeywords});
+  SearchStartState(
+      {required this.searchText,
+      required this.searchKeywordList,
+      required this.searchHistory,
+      required this.suggestKeywords});
 
-  
   SearchStartState copyWith({
     String? searchText,
     List<String>? searchKeywordList,
@@ -25,15 +28,15 @@ final class SearchStartState extends ODAInitialState{
   }
 }
 
-final class SearchLoadingState extends ODALoadingState{
+final class SearchLoadingState extends ODALoadingState {
   final String searchText;
   SearchLoadingState({required this.searchText});
 }
 
-final class SearchSuccessState extends ODASuccessState{
+final class SearchSuccessState extends ODASuccessState {
   final SearchResultModel result;
-  SearchSuccessState({required this.result});
+  final String searchText;
+  SearchSuccessState({required this.searchText, required this.result});
 }
 
-final class SearchErrorState extends ODAFailureState{}
-
+final class SearchErrorState extends ODAFailureState {}

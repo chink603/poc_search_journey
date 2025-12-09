@@ -11,15 +11,18 @@ class HelpAndSupportResults extends StatelessWidget {
     required this.onTapViewAll,
     required this.data,
     required this.onTapCard,
+    required this.isViewAll,
   });
 
   final bool isSelected;
+  final bool isViewAll;
   final List<DocumentEntity> data;
   final VoidCallback onTapViewAll;
   final Function(String? id) onTapCard;
 
   @override
   Widget build(BuildContext context) {
+    if (!isSelected && !isViewAll) return const SliverToBoxAdapter(child: SizedBox.shrink());
     final myaColors = context.myaThemeColors;
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: kPadding7),

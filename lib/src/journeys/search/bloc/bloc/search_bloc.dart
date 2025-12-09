@@ -61,7 +61,7 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
             await _getData(assetModel, event.searchText.toLowerCase());
         dataResult.fold(
           (l) => emit(SearchErrorState()),
-          (r) => emit(SearchSuccessState(result: r)),
+          (r) => emit(SearchSuccessState(result: r, searchText: event.searchText)),
         );
       }
     });
@@ -314,6 +314,7 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
         id: CategoryType.quickMenu.name,
         label: CategoryType.quickMenu.label,
         icon: CategoryType.quickMenu.icon,
+        type: CategoryType.quickMenu,
       ));
     }
     if (result.packageList != null) {
@@ -321,19 +322,22 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
         id: CategoryType.package.name,
         label: CategoryType.package.label,
         icon: CategoryType.package.icon,
+        type: CategoryType.package,
       ));
     }
     if (result.privilegeList != null) {
       categoryList.add(_getCategoryModel(
           id: CategoryType.privilege.name,
           label: CategoryType.privilege.label,
-          icon: CategoryType.privilege.icon));
+          icon: CategoryType.privilege.icon,
+          type: CategoryType.privilege));
     }
     if (result.faqList != null) {
       categoryList.add(_getCategoryModel(
         id: CategoryType.faq.name,
         label: CategoryType.faq.label,
         icon: CategoryType.faq.icon,
+        type: CategoryType.faq,
       ));
     }
     return categoryList;
@@ -343,12 +347,14 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
       {required String id,
       required String icon,
       required String label,
+      required CategoryType type,
       bool? value}) {
     return SearchCategoryModel(
       id: id,
       label: label,
       icon: icon,
       value: value ?? false,
+      type: type,
     );
   }
 

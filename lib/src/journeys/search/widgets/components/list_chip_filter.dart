@@ -9,7 +9,7 @@ class ListChipFilter extends StatefulWidget {
   const ListChipFilter({super.key, required this.list, required this.onTap});
 
   final List<SearchCategoryModel> list;
-  final Function(String) onTap;
+  final Function(SearchCategoryModel) onTap;
 
   @override
   State<ListChipFilter> createState() => _ListChipFilterState();
@@ -17,12 +17,15 @@ class ListChipFilter extends StatefulWidget {
 
 class _ListChipFilterState extends State<ListChipFilter> {
   List<GlobalKey> keys = [];
+  List<SearchCategoryModel> list = [];
 
   @override
   void didUpdateWidget(covariant ListChipFilter oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.list.length != widget.list.length) {
       keys = List.generate(widget.list.length, (index) => GlobalKey());
+      list = widget.list;
+      setState(() {});
     }
   }
 
@@ -30,6 +33,7 @@ class _ListChipFilterState extends State<ListChipFilter> {
   void initState() {
     super.initState();
     keys = List.generate(widget.list.length, (index) => GlobalKey());
+    list = widget.list;
   }
 
   void scrollToChip(GlobalKey key) {
@@ -45,12 +49,33 @@ class _ListChipFilterState extends State<ListChipFilter> {
     }
   }
 
+  void selectedChip(String label) {
+    SearchCategoryModel? selected;
+
+    list = list.map((e) {
+      final isTarget = e.label == label;
+      final updated = e.copyWith(value: isTarget ? !e.value : false);
+
+      if (isTarget) {
+        selected = updated;
+      }
+
+      return updated;
+    }).toList();
+
+    if (selected != null) {
+      widget.onTap(selected!);
+    }
+
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: widget.list
+        children: list
             .asMap()
             .entries
             .map(
@@ -63,8 +88,8 @@ class _ListChipFilterState extends State<ListChipFilter> {
                     prefixIconKey: entry.value.icon,
                     isSelected: entry.value.value,
                     onPressed: () {
+                      selectedChip(entry.value.label);
                       scrollToChip(keys[entry.key]);
-                      widget.onTap(entry.value.label);
                     }),
               ),
             )

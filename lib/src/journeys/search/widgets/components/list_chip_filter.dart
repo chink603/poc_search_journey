@@ -6,10 +6,11 @@ import '../../utils/util.dart';
 import '../../models/models.dart';
 
 class ListChipFilter extends StatefulWidget {
-  const ListChipFilter({super.key, required this.list, required this.onTap});
+  const ListChipFilter({super.key, required this.list, required this.onTap, this.isDisable = false});
 
   final List<SearchCategoryModel> list;
   final Function(SearchCategoryModel) onTap;
+  final bool isDisable;
 
   @override
   State<ListChipFilter> createState() => _ListChipFilterState();
@@ -50,11 +51,11 @@ class _ListChipFilterState extends State<ListChipFilter> {
   }
 
   void selectedChip(String label) {
+    if (list.length == 1 && !widget.isDisable) return;
     SearchCategoryModel? selected;
-
     list = list.map((e) {
       final isTarget = e.label == label;
-      final updated = e.copyWith(value: isTarget ? !e.value : false);
+      final updated = e.copyWith(value:widget.isDisable ? false : isTarget ? !e.value : false);
 
       if (isTarget) {
         selected = updated;
@@ -62,11 +63,9 @@ class _ListChipFilterState extends State<ListChipFilter> {
 
       return updated;
     }).toList();
-
-    if (selected != null) {
+    if(selected != null) {
       widget.onTap(selected!);
     }
-
     setState(() {});
   }
 

@@ -1,20 +1,18 @@
 import 'package:mya_ui_design/mya_ui_design.dart';
 import 'package:oda_fe_framework/oda_framework.dart';
 
+import '../../cubit/search_result_cubit.dart';
 import '../../models/models.dart';
-import '../../utils/util.dart';
 import 'components.dart';
 
 class SearchCategorySection extends StatefulWidget {
   const SearchCategorySection(
       {super.key,
       required this.categories,
-      required this.subCategories,
       required this.onTapCategory,
       required this.onTapSubCategory});
 
   final List<SearchCategoryModel>? categories;
-  final Map<CategoryType, List<SearchCategoryModel>>? subCategories;
   final Function(SearchCategoryModel model) onTapCategory;
   final Function(SearchCategoryModel model) onTapSubCategory;
 
@@ -24,26 +22,13 @@ class SearchCategorySection extends StatefulWidget {
 
 class _SearchCategorySectionState extends State<SearchCategorySection> {
   List<SearchCategoryModel> categories = [];
-  List<SearchCategoryModel> subCategories = [];
-  Map<CategoryType, List<SearchCategoryModel>>? stampSubCategories;
   @override
   void initState() {
     super.initState();
     categories = widget.categories ?? [];
-    stampSubCategories = widget.subCategories;
     if (categories.length == 1) {
       categories = categories.map((e) => e.copyWith(value: true)).toList();
-      subCategories = stampSubCategories?[categories.first.type] ?? [];
     }
-  }
-
-  void _updateSubCategories(String label) {
-    final index = categories.indexWhere((e) => e.label == label);
-    if (index == -1) return;
-    final type = categories[index].type;
-    subCategories =
-        subCategories.isNotEmpty ? [] : stampSubCategories?[type] ?? [];
-    setState(() {});
   }
 
   @override
@@ -62,18 +47,24 @@ class _SearchCategorySectionState extends State<SearchCategorySection> {
                 list: categories,
                 onTap: (SearchCategoryModel model) {
                   widget.onTapCategory(model);
-                  _updateSubCategories(model.label);
                 }),
-          if (subCategories.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: kPadding4),
-              child: ListChipFilter(
-                list: subCategories,
-                onTap: (SearchCategoryModel model) {
-                  widget.onTapSubCategory(model);
-                },
-              ),
-            ),
+          BlocBuilder<SearchResultCubit, ODACubitState>(
+              builder: (context, state) {
+            if (state is SearchResultSuccess) {
+              if (state.subCategories.isNotEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: kPadding4),
+                  child: ListChipFilter(
+                    list: state.subCategories,
+                    onTap: (SearchCategoryModel model) {
+                      widget.onTapSubCategory(model);
+                    },
+                  ),
+                );
+              }
+            }
+            return const SizedBox.shrink();
+          })
         ],
       ),
     );

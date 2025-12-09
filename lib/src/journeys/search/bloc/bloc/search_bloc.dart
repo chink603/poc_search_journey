@@ -53,7 +53,6 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
     });
     on<SearchLoadEvent>((event, emit) async {
       add(HistoryAddSearchEvent(searchText: event.searchText));
-
       if (event.checkRouteModel.type == CheckRouteEnum.none) {
         emit(SearchLoadingState(searchText: event.searchText));
         final assetModel = await _getAsset();
@@ -63,7 +62,12 @@ class SearchBloc extends OdaBloc<ODAEvent, ODAState> {
           (l) => emit(SearchErrorState()),
           (r) => emit(SearchSuccessState(result: r, searchText: event.searchText)),
         );
+      }else{
+        if(state is! SearchStartState){
+         add(SearchStartEvent());
+        }
       }
+      
     });
     on<SearchPressedEvent>((event, emit) {});
     on<HistoryAddSearchEvent>((event, emit) async {

@@ -101,6 +101,7 @@ class SearchStartSection extends StatelessWidget {
                     .map((e) =>
                         SearchCategoryModel(label: e, id: e, value: false))
                     .toList(),
+                isDisable: true,    
                 onTap: (SearchCategoryModel model) {
                   onPressed(model.label);
                 }),

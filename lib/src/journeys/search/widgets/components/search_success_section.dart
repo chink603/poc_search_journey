@@ -50,7 +50,8 @@ class _SearchSuccessSectionState extends State<SearchSuccessSection> {
               if (state.searchResultModel.quickMenuList?.isNotEmpty ?? false)
                 QuickMenuResults(
                   data: state.searchResultModel.quickMenuList!,
-                  isSelected: state.selectedCategoryType == CategoryType.quickMenu,
+                  isSelected:
+                      state.selectedCategoryType == CategoryType.quickMenu,
                   isViewAll: state.selectedCategoryType == CategoryType.none,
                   onTapViewAll: () {},
                   onTapCard: (int index) {},
@@ -59,12 +60,21 @@ class _SearchSuccessSectionState extends State<SearchSuccessSection> {
                 PackageResults(
                   data: state.searchResultModel.packageList!,
                   packageCards: state.packageCards,
-                  isSelected: state.selectedCategoryType == CategoryType.package,
+                  isSelected:
+                      state.selectedCategoryType == CategoryType.package,
                   isViewAll: state.selectedCategoryType == CategoryType.none,
                   onTapViewAll: () async {},
                   onSelectPackageById: (value) {},
                   onSelectBuyNow: (value) {},
                 ),
+              if (state.loyaltyProductList?.isNotEmpty ?? false)
+                PrivilegeResults(
+                    data: state.campaigns!,
+                    count: state.campaignCount,
+                    isSelected: state.selectedCategoryType == CategoryType.privilege,
+                    isViewAll: state.selectedCategoryType == CategoryType.none,
+                    onTapViewAll: () {},
+                    onTapCard: (index) {}),
               if (state.searchResultModel.faqList?.isNotEmpty ?? false)
                 HelpAndSupportResults(
                   data: state.searchResultModel.faqList!,

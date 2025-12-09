@@ -32,6 +32,7 @@ class SearchStep0 extends OdaStep {
     scrollController.dispose();
     searchBloc = null;
     searchResultCubit = null;
+    _isButtonVisible.value = false;
     super.dispose();
   }
 
@@ -142,7 +143,7 @@ class SearchStep0 extends OdaStep {
                         if (notification.metrics.axis == Axis.vertical) {
                           _isButtonVisible.value =
                               notification.metrics.pixels > 1;
-                          if(notification.metrics.atEdge){
+                          if(notification.metrics.atEdge && notification is ScrollEndNotification ){
                             if(notification.metrics.pixels == notification.metrics.maxScrollExtent){
                                 searchResultCubit?.loadMore();
                             }
@@ -180,15 +181,16 @@ class SearchStep0 extends OdaStep {
                               if (state is SearchSuccessState) {
                                 return SearchCategorySection(
                                     categories: state.result.categoryList,
-                                    subCategories: state.result.subCategoryList,
                                     onTapCategory: (SearchCategoryModel model) {
-                                      searchResultCubit?.selectedCategoryType(
+                                      searchResultCubit?.selectCategory(
                                           model.value
                                               ? model.type
                                               : CategoryType.none);
                                     },
                                     onTapSubCategory:
-                                        (SearchCategoryModel model) {});
+                                        (SearchCategoryModel model) {
+                                          searchResultCubit?.selectSubCategory(model);
+                                        });
                               }
                               return Container(
                                 decoration: BoxDecoration(

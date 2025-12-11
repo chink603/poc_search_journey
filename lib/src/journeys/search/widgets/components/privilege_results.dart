@@ -7,20 +7,21 @@ import 'package:oda_search_micro_journey/src/journeys/search/utils/util.dart';
 import '../widgets.dart';
 
 class PrivilegeResults extends StatelessWidget {
-  final List<LoyaltyProgramProductSpec> data;
   const PrivilegeResults({
     super.key,
     required this.data,
     required this.isSelected,
     required this.onTapViewAll,
     required this.onTapCard,
+    required this.sortedBy,
     required this.isViewAll,
     required this.count,
   });
-
+  final List<LoyaltyProgramProductSpec> data;
   final bool isSelected;
   final VoidCallback onTapViewAll;
   final Function(int) onTapCard;
+  final List<int> sortedBy;
   final bool isViewAll;
   final int count;
   @override
@@ -51,10 +52,12 @@ class PrivilegeResults extends StatelessWidget {
                     context,
                     key: ValueKey(
                         'myaisCommonSearch/privilegeCard/$index/cardProductInformation'),
-                    object: data[index],
+                    object: data[sortedBy[index]],
                     onTapCard: (str) {},
                   ));
-            }, childCount: isSelected ? data.length : data.take(10).length),
+            },
+                childCount:
+                    isSelected ? count : sortedBy.take(10).length),
           ),
           if (!isSelected && count > 10)
             SliverToBoxAdapter(

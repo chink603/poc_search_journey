@@ -32,7 +32,7 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
         selectedCategoryType: selectedCategoryType,
         searchCampaignModel: searchCampaignModel,
         loyaltyProductList: loyaltyProductList,
-        campaigns: searchCampaignModel.groupedAll,
+        campaignsSortedBy: searchCampaignModel.groupedAll.values.toList(),
         campaignCount: searchCampaignModel.groupCount));
   }
 
@@ -52,15 +52,24 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
     if (state is SearchResultSuccess) {
       final currentState = state as SearchResultSuccess;
       if (model.type == CategoryType.privilege) {
-        final campaigns = model.value
-            ? currentState.searchCampaignModel.groupedBySubCategory[model.id]
-            : currentState.searchCampaignModel.groupedAll;
-        final campaignCount = model.value
-            ? currentState
-                .searchCampaignModel.groupedBySubCategoryCount[model.id]
-            : currentState.searchCampaignModel.groupCount;
+        List<int> campaigns = [];
+        int campaignCount = 0;
+        if (model.value) {
+          campaigns = findSubCategoryCampaigns(
+            currentState.searchCampaignModel.groupedAll,
+            currentState.searchCampaignModel.groupedBySubCategoryIds[model.id] ?? [],
+          );
+          campaignCount = currentState.searchCampaignModel.groupedBySubCategoryCount[model.id] ?? 0;
+        } else {
+          campaigns =
+              currentState.searchCampaignModel.groupedAll.values.toList();
+          campaignCount = currentState.searchCampaignModel.groupCount;
+        }
+        if (campaigns.isEmpty || campaignCount == 0) {
+          return;
+        }
         emit(currentState.copyWith(
-          campaigns: campaigns,
+          campaignsSortedBy: campaigns,
           campaignCount: campaignCount,
         ));
       }
@@ -115,6 +124,15 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
     return packageCards;
   }
 
+  List<int> findSubCategoryCampaigns(
+      Map<String, int> groupedAll, List<String> campaignsIds) {
+    final campaigns = <int>[];
+    for (final campaignId in campaignsIds) {
+      campaigns.add(groupedAll[campaignId] ?? 0);
+    }
+    return campaigns;
+  }
+
   Future<SearchCampaignModel> filterMapCampaignsAndSubCategories(
     List<SearchCategoryModel> subCategories,
     List<LoyaltyProgramProductSpec> data,
@@ -122,71 +140,80 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
     if (data.isEmpty) {
       return SearchCampaignModel.empty();
     }
-    final Map<String, List<String>> subCatIdCache = {};
-    final campaignsByCatId = <String, List<LoyaltyProgramProductSpec>>{};
 
-    // 1. สร้าง Set ของ category IDs แบบเร็ว
+    final Map<String, List<String>> subCatIdCache = {};
+    final campaignsByCatId = <String, List<String>>{};
+    final campaignIdToIndex = <String, int>{};
+
     final allCategoryIds = <String>{};
-    for (final p in data) {
+    for (var i = 0; i < data.length; i++) {
+      final p = data[i];
+
       final category = await p.category;
-      if (category.isNotEmpty) {
-        final categoryId = category[0].TORO_syncCategoryId;
-        if (categoryId != null && categoryId.isNotEmpty) {
-          allCategoryIds.add(categoryId);
-          campaignsByCatId.putIfAbsent(categoryId, () => []).add(p);
-        }
+      if (category.isEmpty) continue;
+
+      final categoryId = category.first.TORO_syncCategoryId;
+      final campaignId = p.id;
+
+      if (categoryId == null || categoryId.isEmpty || campaignId.isEmpty) {
+        continue;
       }
+
+      allCategoryIds.add(categoryId);
+      campaignIdToIndex[campaignId] = i;
+      campaignsByCatId.putIfAbsent(categoryId, () => []).add(campaignId);
     }
 
     if (allCategoryIds.isEmpty) {
       return SearchCampaignModel.empty();
     }
-    final campaignsBySubCat = <String, List<LoyaltyProgramProductSpec>>{};
-    // 2. กรอง subCategories แบบเร็ว
-    List<SearchCategoryModel> resultSubCategories = <SearchCategoryModel>[];
+
+    // 2) กรอง subCategories และสร้าง map: subCatKey -> campaignIds
+    final campaignsBySubCatIds = <String, List<String>>{};
+    final resultSubCategories = <SearchCategoryModel>[];
+
     for (final subCat in subCategories) {
       final key = subCat.id.toString();
 
-      // ใช้ cache สำหรับ split results
       final ids =
           subCatIdCache[key] ??= key.split(',').map((e) => e.trim()).toList();
 
-      // Early return เมื่อเจอ match แรก
       bool hasMatch = false;
       for (final id in ids) {
         if (allCategoryIds.contains(id)) {
           hasMatch = true;
-          break; // หยุดทันทีเมื่อเจอ
+          break;
         }
       }
 
-      if (hasMatch) {
-        resultSubCategories.add(subCat);
-        final campaignsForThisSubCat = <LoyaltyProgramProductSpec>{};
-        for (final id in ids) {
-          campaignsForThisSubCat.addAll(campaignsByCatId[id] ?? []);
-        }
-        if (campaignsForThisSubCat.isNotEmpty) {
-          campaignsBySubCat[key] = campaignsForThisSubCat.toList();
-        }
+      if (!hasMatch) continue;
+
+      resultSubCategories.add(subCat);
+
+      final campaignsForThisSubCatIds = <String>{};
+      for (final id in ids) {
+        campaignsForThisSubCatIds.addAll(campaignsByCatId[id] ?? []);
+      }
+
+      if (campaignsForThisSubCatIds.isNotEmpty) {
+        campaignsBySubCatIds[key] = campaignsForThisSubCatIds.toList();
       }
     }
-    // 3. นับจำนวน campaign ของแต่ละ sub-category
+
     final groupedBySubCategoryCount =
-        campaignsBySubCat.map((k, v) => MapEntry(k, v.length));
+        campaignsBySubCatIds.map((k, v) => MapEntry(k, v.length));
     final groupCount = data.length;
-    // Step 6: Return map grouped max limitCampaign
-    final groupedAllMax =
-        campaignsBySubCat.map((k, v) => MapEntry(k, v.take(20).toList()));
 
     if (resultSubCategories.length == 1) {
       resultSubCategories.first.value == true;
     }
+
     return SearchCampaignModel(
-        groupedBySubCategory: groupedAllMax,
-        subCategories: resultSubCategories,
-        groupedBySubCategoryCount: groupedBySubCategoryCount,
-        groupCount: groupCount,
-        groupedAll: data.take(20).toList());
+      groupedBySubCategoryIds: campaignsBySubCatIds,
+      subCategories: resultSubCategories,
+      groupedBySubCategoryCount: groupedBySubCategoryCount,
+      groupCount: groupCount,
+      groupedAll: campaignIdToIndex,
+    );
   }
 }

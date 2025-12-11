@@ -13,16 +13,16 @@ final class SearchResultSuccess extends SearchResultState {
   final List<PackageCardViewModel> packageCards;
   final List<LoyaltyProgramProductSpec>? loyaltyProductList;
   final SearchCampaignModel searchCampaignModel;
-  final List<LoyaltyProgramProductSpec>? campaigns;
   final int campaignCount;
-  SearchResultSuccess( {
+  final List<int> campaignsSortedBy;
+  SearchResultSuccess({
+    required this.campaignsSortedBy,
     required this.searchResultModel,
     required this.selectedCategoryType,
     required this.packageCards,
     required this.subCategories,
     required this.searchCampaignModel,
     required this.loyaltyProductList,
-    required this.campaigns,
     required this.campaignCount,
   });
 
@@ -33,16 +33,16 @@ final class SearchResultSuccess extends SearchResultState {
       List<SearchCategoryModel>? subCategories,
       SearchCampaignModel? searchCampaignModel,
       List<LoyaltyProgramProductSpec>? loyaltyProductList,
-      List<LoyaltyProgramProductSpec>? campaigns,
-      int? campaignCount}) {
+      int? campaignCount,
+      List<int>? campaignsSortedBy}) {
     return SearchResultSuccess(
+      campaignsSortedBy: campaignsSortedBy ?? this.campaignsSortedBy,
       searchResultModel: searchResultModel ?? this.searchResultModel,
       selectedCategoryType: selectedCategoryType ?? this.selectedCategoryType,
       packageCards: packageCards ?? this.packageCards,
       subCategories: subCategories ?? this.subCategories,
       searchCampaignModel: searchCampaignModel ?? this.searchCampaignModel,
       loyaltyProductList: loyaltyProductList ?? this.loyaltyProductList,
-      campaigns: campaigns ?? this.campaigns,
       campaignCount: campaignCount ?? this.campaignCount,
     );
   }

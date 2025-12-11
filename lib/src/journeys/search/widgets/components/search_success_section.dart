@@ -25,20 +25,6 @@ class _SearchSuccessSectionState extends State<SearchSuccessSection> {
         .setUpResult(widget.searchResultModel, widget.searchText);
   }
 
-  bool isShowResultByCategory(
-    CategoryType categoryType,
-    CategoryType selectedCategoryType,
-    Object? data,
-  ) {
-    if (data == null) return false;
-
-    if (selectedCategoryType == CategoryType.none) {
-      return true;
-    }
-
-    return categoryType == selectedCategoryType;
-  }
-
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<SearchResultCubit, ODACubitState>(
@@ -69,7 +55,8 @@ class _SearchSuccessSectionState extends State<SearchSuccessSection> {
                 ),
               if (state.loyaltyProductList?.isNotEmpty ?? false)
                 PrivilegeResults(
-                    data: state.campaigns!,
+                    data: state.loyaltyProductList!,
+                    sortedBy: state.campaignsSortedBy,
                     count: state.campaignCount,
                     isSelected: state.selectedCategoryType == CategoryType.privilege,
                     isViewAll: state.selectedCategoryType == CategoryType.none,

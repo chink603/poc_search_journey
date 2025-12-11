@@ -2,6 +2,8 @@ import 'package:mya_ui_design/mya_ui_design.dart';
 import 'package:oda_fe_framework/oda_framework.dart';
 import 'package:oda_search_micro_journey/src/journeys/search/bloc/bloc.dart';
 
+import '../../cubit/search_result_cubit.dart';
+import '../../models/models.dart';
 import '../../utils/util.dart';
 
 class SearchInputSection extends StatefulWidget {
@@ -9,10 +11,12 @@ class SearchInputSection extends StatefulWidget {
     super.key,
     required this.onSelected,
     required this.onEmpty,
+    required this.onFilterSelected,
   });
 
   final Function(String) onSelected;
   final VoidCallback onEmpty;
+  final Function(List<SearchCategoryModel>) onFilterSelected;
 
   @override
   State<SearchInputSection> createState() => _SearchInputSectionState();
@@ -112,10 +116,9 @@ class _SearchInputSectionState extends State<SearchInputSection> {
                           }),
                     ),
                   ),
-                  BlocBuilder<SearchBloc, ODAState>(
-                    buildWhen: (previous, current) => current is! SearchLoadingState,
+                  BlocBuilder<SearchResultCubit, ODACubitState>(
                     builder: (context, state) {
-                      if(state is! SearchSuccessState){
+                      if (state is! SearchResultSuccess) {
                         return const SizedBox(width: kPadding7);
                       }
                       return MyaBadgeNotification(
@@ -126,16 +129,39 @@ class _SearchInputSectionState extends State<SearchInputSection> {
                               'myaisCommonSearch/headerNavigation/${MyaButtonIcon.compType}/filterButton'),
                           style: MyaButtonIconStyle.iconOnly,
                           iconKey: 'iconui_general_filter',
-                          isDisabled: state is! SearchSuccessState,
+                          isDisabled: state.filterCategory.isEmpty,
                           onPressed: () {
-                            final List<MyaBottomSheetFilterContent>
-                                filterContent = [];
+                            List<MyaBottomSheetChipFilterModel> chips =
+                                state.filterCategory
+                                    .map(
+                                      (e) => MyaBottomSheetChipFilterModel(
+                                        id: int.tryParse(e.id) ?? 0,
+                                        labelText: context.lang(e.label),
+                                        isSelected: e.value,
+                                      ),
+                                    )
+                                    .toList();
                             myaShowBottomSheet(
                               context: context,
                               enableDrag: true,
                               isDismissible: true,
                               widget: StatefulBuilder(
                                 builder: (ctx, setState) {
+                                  List<MyaBottomSheetFilterContent>
+                                      filterContent = [
+                                    MyaBottomSheetFilterContent(
+                                      title: context.lang('search_filter_sort'),
+                                      listMyaChipFilter: chips,
+                                      onPressedChip: (id, selected) {
+                                        setState(() {
+                                          for (var element in chips) {
+                                            element.isSelected =
+                                                element.id == id;
+                                          }
+                                        });
+                                      },
+                                    ),
+                                  ];
                                   return MyaBottomSheetFilter(
                                     key: const ValueKey(
                                         'myaisCommonSearch/aroundYouFilter/${MyaBottomSheetFilter.compType}'),
@@ -144,15 +170,37 @@ class _SearchInputSectionState extends State<SearchInputSection> {
                                     isShowCloseIcon: true,
                                     isDragHandle: true,
                                     showStickyButton: true,
-                                    stateResetButton: true,
+                                    stateResetButton: chips.every(
+                                        (element) => !element.isSelected),
                                     showScrollBars: true,
+                                    headingText: context.lang('select_filter'),
                                     selectButtonText: context
                                         .lang('home_search_confirm_botton'),
                                     resetButtonText: context
                                         .lang('home_search_reset_button'),
                                     resetButtonStyle: MyaButtonStyle.outlined,
-                                    onSelectButton: () {},
-                                    onResetButton: () {},
+                                    onSelectButton: () {
+                                      final selectedChipIds = chips
+                                          .where((chip) => chip.isSelected)
+                                          .map((chip) => chip.id)
+                                          .toSet();
+                                      final list =
+                                          state.filterCategory.map((e) {
+                                        final id = int.tryParse(e.id);
+                                        final isSelected = id != null &&
+                                            selectedChipIds.contains(id);
+                                        return e.copyWith(value: isSelected);
+                                      }).toList();
+                                      widget.onFilterSelected(list);
+                                      Navigator.of(context).pop();
+                                    },
+                                    onResetButton: () {
+                                      setState(() {
+                                        for (var element in chips) {
+                                          element.isSelected = false;
+                                        }
+                                      });
+                                    },
                                     onClose: () {
                                       Navigator.of(context).pop();
                                     },
@@ -165,7 +213,8 @@ class _SearchInputSectionState extends State<SearchInputSection> {
                         ),
                         positionedRight: 8,
                         positionedTop: 10,
-                        isShowBadge: false,
+                        isShowBadge: state.filterCategory
+                            .any((element) => element.value),
                         badgeType: MyaBadgeType.dot,
                         padding: const EdgeInsets.only(right: kPadding4),
                       );

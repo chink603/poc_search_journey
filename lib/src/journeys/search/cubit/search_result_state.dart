@@ -15,6 +15,7 @@ final class SearchResultSuccess extends SearchResultState {
   final SearchCampaignModel searchCampaignModel;
   final int campaignCount;
   final List<int> campaignsSortedBy;
+  final List<SearchCategoryModel> filterCategory;
   SearchResultSuccess({
     required this.campaignsSortedBy,
     required this.searchResultModel,
@@ -24,6 +25,7 @@ final class SearchResultSuccess extends SearchResultState {
     required this.searchCampaignModel,
     required this.loyaltyProductList,
     required this.campaignCount,
+    required this.filterCategory,
   });
 
   SearchResultSuccess copyWith(
@@ -34,7 +36,8 @@ final class SearchResultSuccess extends SearchResultState {
       SearchCampaignModel? searchCampaignModel,
       List<LoyaltyProgramProductSpec>? loyaltyProductList,
       int? campaignCount,
-      List<int>? campaignsSortedBy}) {
+      List<int>? campaignsSortedBy,
+      List<SearchCategoryModel>? filterCategory}) {
     return SearchResultSuccess(
       campaignsSortedBy: campaignsSortedBy ?? this.campaignsSortedBy,
       searchResultModel: searchResultModel ?? this.searchResultModel,
@@ -44,6 +47,7 @@ final class SearchResultSuccess extends SearchResultState {
       searchCampaignModel: searchCampaignModel ?? this.searchCampaignModel,
       loyaltyProductList: loyaltyProductList ?? this.loyaltyProductList,
       campaignCount: campaignCount ?? this.campaignCount,
+      filterCategory: filterCategory ?? this.filterCategory,
     );
   }
 }

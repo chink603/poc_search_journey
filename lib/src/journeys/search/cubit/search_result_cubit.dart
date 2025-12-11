@@ -12,20 +12,30 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
   SearchResultCubit({required super.context})
       : super(initialState: SearchResultInitial());
 
+  void reset() {
+    emit(SearchResultInitial());
+  }
+
   void setUpResult(
       SearchResultModel searchResultModel, String searchText) async {
     emit(SearchResultLoading());
     final selectedCategoryType =
         _autoSelectCategoryType(searchResultModel.categoryList);
+
+    final filterCategory = _filterSearchCategoryByType(
+        searchResultModel.filterList?[selectedCategoryType] ?? [],
+        selectedCategoryType);
+
     final packageCards =
         await _initLoadPackageCards(searchResultModel.packageList);
     final loyaltyProductList = searchResultModel.privilegeList?.toList();
-    final searchCampaignModel = await filterMapCampaignsAndSubCategories(
+    final searchCampaignModel = await _filterMapCampaignsAndSubCategories(
         searchResultModel.subCategoryList?[CategoryType.privilege] ?? [],
         loyaltyProductList ?? []);
-    final subCategories = selectSubCategoryByType(
+    final subCategories = _selectSubCategoryByType(
         searchCampaignModel.subCategories, selectedCategoryType);
     emit(SearchResultSuccess(
+        filterCategory: filterCategory,
         packageCards: packageCards,
         subCategories: subCategories,
         searchResultModel: searchResultModel,
@@ -39,12 +49,38 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
   void selectCategory(CategoryType categoryType) {
     if (state is SearchResultSuccess) {
       final currentState = state as SearchResultSuccess;
-      final subCategories = selectSubCategoryByType(
+      final subCategories = _selectSubCategoryByType(
           currentState.searchCampaignModel.subCategories, categoryType);
+      final filterCategory = _filterSearchCategoryByType(
+          currentState.searchResultModel.filterList?[categoryType] ?? [],
+          categoryType);
       emit(
         currentState.copyWith(
-            selectedCategoryType: categoryType, subCategories: subCategories),
+            selectedCategoryType: categoryType,
+            subCategories: subCategories,
+            filterCategory: filterCategory),
       );
+    }
+  }
+
+  void selectFilterCategory(List<SearchCategoryModel> model) {
+    if (state is SearchResultSuccess) {
+      final currentState = state as SearchResultSuccess;
+      final category = currentState.selectedCategoryType;
+      final oldFilterList = currentState.searchResultModel.filterList;
+
+      if (oldFilterList != null) {
+        final newFilterList = Map.of(oldFilterList);
+        newFilterList[category] = model;
+        emit(
+          currentState.copyWith(
+            filterCategory: model,
+            searchResultModel: currentState.searchResultModel.copyWith(
+              filterList: newFilterList,
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -55,11 +91,15 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
         List<int> campaigns = [];
         int campaignCount = 0;
         if (model.value) {
-          campaigns = findSubCategoryCampaigns(
+          campaigns = _findSubCategoryCampaigns(
             currentState.searchCampaignModel.groupedAll,
-            currentState.searchCampaignModel.groupedBySubCategoryIds[model.id] ?? [],
+            currentState
+                    .searchCampaignModel.groupedBySubCategoryIds[model.id] ??
+                [],
           );
-          campaignCount = currentState.searchCampaignModel.groupedBySubCategoryCount[model.id] ?? 0;
+          campaignCount = currentState
+                  .searchCampaignModel.groupedBySubCategoryCount[model.id] ??
+              0;
         } else {
           campaigns =
               currentState.searchCampaignModel.groupedAll.values.toList();
@@ -103,8 +143,14 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
         : CategoryType.none;
   }
 
-  List<SearchCategoryModel> selectSubCategoryByType(
+  List<SearchCategoryModel> _selectSubCategoryByType(
       List<SearchCategoryModel> searchCampaignModel, CategoryType type) {
+    return type == CategoryType.privilege ? searchCampaignModel : [];
+  }
+
+  List<SearchCategoryModel> _filterSearchCategoryByType(
+      List<SearchCategoryModel>? searchCampaignModel, CategoryType type) {
+    if (searchCampaignModel == null) return [];
     return type == CategoryType.privilege ? searchCampaignModel : [];
   }
 
@@ -124,7 +170,7 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
     return packageCards;
   }
 
-  List<int> findSubCategoryCampaigns(
+  List<int> _findSubCategoryCampaigns(
       Map<String, int> groupedAll, List<String> campaignsIds) {
     final campaigns = <int>[];
     for (final campaignId in campaignsIds) {
@@ -133,7 +179,7 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
     return campaigns;
   }
 
-  Future<SearchCampaignModel> filterMapCampaignsAndSubCategories(
+  Future<SearchCampaignModel> _filterMapCampaignsAndSubCategories(
     List<SearchCategoryModel> subCategories,
     List<LoyaltyProgramProductSpec> data,
   ) async {

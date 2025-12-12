@@ -9,17 +9,19 @@ final class SearchResultLoading extends SearchResultState {}
 final class SearchResultSuccess extends SearchResultState {
   final SearchResultModel searchResultModel;
   final CategoryType selectedCategoryType;
+  final SearchCategoryModel? selectedSubCategory;
   final List<SearchCategoryModel> subCategories;
   final List<PackageCardViewModel> packageCards;
-  final List<LoyaltyProgramProductSpec>? loyaltyProductList;
+  final Map<String, LoyaltyProgramProductSpec>? loyaltyProductList;
   final SearchCampaignModel searchCampaignModel;
   final int campaignCount;
-  final List<int> campaignsSortedBy;
+  final List<String> campaignsSortedBy;
   final List<SearchCategoryModel> filterCategory;
   SearchResultSuccess({
     required this.campaignsSortedBy,
     required this.searchResultModel,
     required this.selectedCategoryType,
+    this.selectedSubCategory,
     required this.packageCards,
     required this.subCategories,
     required this.searchCampaignModel,
@@ -34,10 +36,11 @@ final class SearchResultSuccess extends SearchResultState {
       List<PackageCardViewModel>? packageCards,
       List<SearchCategoryModel>? subCategories,
       SearchCampaignModel? searchCampaignModel,
-      List<LoyaltyProgramProductSpec>? loyaltyProductList,
+      Map<String, LoyaltyProgramProductSpec>? loyaltyProductList,
       int? campaignCount,
-      List<int>? campaignsSortedBy,
-      List<SearchCategoryModel>? filterCategory}) {
+      List<String>? campaignsSortedBy,
+      List<SearchCategoryModel>? filterCategory,
+      SearchCategoryModel? selectedSubCategory}) {
     return SearchResultSuccess(
       campaignsSortedBy: campaignsSortedBy ?? this.campaignsSortedBy,
       searchResultModel: searchResultModel ?? this.searchResultModel,
@@ -48,6 +51,7 @@ final class SearchResultSuccess extends SearchResultState {
       loyaltyProductList: loyaltyProductList ?? this.loyaltyProductList,
       campaignCount: campaignCount ?? this.campaignCount,
       filterCategory: filterCategory ?? this.filterCategory,
+      selectedSubCategory: selectedSubCategory ?? this.selectedSubCategory,
     );
   }
 }

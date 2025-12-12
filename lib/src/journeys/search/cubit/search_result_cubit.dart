@@ -5,6 +5,7 @@ import 'package:oda_search_micro_journey/src/journeys/search/utils/util.dart';
 import 'package:core/core_lang/core_lang.dart';
 
 import '../models/models.dart';
+import '../utils/search_util.dart';
 
 part 'search_result_state.dart';
 
@@ -13,6 +14,7 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
       : super(initialState: SearchResultInitial());
 
   void reset() {
+    SearchUtil.clearAllCaches();
     emit(SearchResultInitial());
   }
 
@@ -26,8 +28,7 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
         searchResultModel.filterList?[selectedCategoryType] ?? [],
         selectedCategoryType);
 
-    final packageCards =
-        await _initLoadPackageCards(searchResultModel.packageList);
+    final packageCards = await _loadPackageCards(searchResultModel.packageList);
     final loyaltyProductList = searchResultModel.privilegeList?.toList();
     final searchCampaignModel = await _filterMapCampaignsAndSubCategories(
         searchResultModel.subCategoryList?[CategoryType.privilege] ?? [],
@@ -41,9 +42,9 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
         searchResultModel: searchResultModel,
         selectedCategoryType: selectedCategoryType,
         searchCampaignModel: searchCampaignModel,
-        loyaltyProductList: loyaltyProductList,
-        campaignsSortedBy: searchCampaignModel.groupedAll.values.toList(),
-        campaignCount: searchCampaignModel.groupCount));
+        loyaltyProductList: _mapCampaigns(loyaltyProductList ?? []),
+        campaignsSortedBy: searchCampaignModel.groupedAll,
+        campaignCount: searchCampaignModel.groupedAllCount));
   }
 
   void selectCategory(CategoryType categoryType) {
@@ -63,23 +64,63 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
     }
   }
 
-  void selectFilterCategory(List<SearchCategoryModel> model) {
+  void selectFilterCategory(List<SearchCategoryModel> model) async {
+    if (model.isEmpty) return;
+
     if (state is SearchResultSuccess) {
       final currentState = state as SearchResultSuccess;
       final category = currentState.selectedCategoryType;
+      final findOneSelected = model.firstWhere((element) => element.value,
+          orElse: () => const SearchCategoryModel(
+              id: '', label: '', value: false, type: CategoryType.none));
+      if (currentState.filterCategory.any((element) =>
+          element.id == findOneSelected.id &&
+          element.value == findOneSelected.value)) {
+        return;
+      }
       final oldFilterList = currentState.searchResultModel.filterList;
+      if (oldFilterList == null) return;
+      final newFilterList = Map.of(oldFilterList);
+      newFilterList[category] = model;
 
-      if (oldFilterList != null) {
-        final newFilterList = Map.of(oldFilterList);
-        newFilterList[category] = model;
-        emit(
-          currentState.copyWith(
+      switch (category) {
+        case CategoryType.privilege:
+          final sortNumber = int.tryParse(findOneSelected.id) ?? 0;
+          final campaigns = await _sortCampaigns(
+              sortNumber, currentState.loyaltyProductList!.values.toList());
+          final searchCampaignModel = await _filterMapCampaignsAndSubCategories(
+              currentState.searchResultModel.subCategoryList?[category] ?? [],
+              campaigns);
+          final compareSubCategory = _compareSelectSubCategory(
+              searchCampaignModel.subCategories,
+              currentState.selectedSubCategory);
+          final selectedSubCategory = compareSubCategory.firstWhere((element) => element.value, orElse: () => const SearchCategoryModel(
+              id: '', label: '', value: false, type: CategoryType.none));
+
+          final selectCampaignsSort = selectedSubCategory.value
+              ? searchCampaignModel.groupedBySubCategoryIds[
+                      selectedSubCategory.id] ??
+                  searchCampaignModel.groupedAll
+              : searchCampaignModel.groupedAll;
+          final campaignCount = selectedSubCategory.value
+              ? searchCampaignModel.groupedBySubCategoryCount[
+                      selectedSubCategory.id] ??
+                  searchCampaignModel.groupedAllCount
+              : searchCampaignModel.groupedAllCount;
+
+          emit(currentState.copyWith(
             filterCategory: model,
+            subCategories: compareSubCategory,
+            searchCampaignModel: searchCampaignModel,
+            campaignsSortedBy: selectCampaignsSort,
+            campaignCount: campaignCount,
             searchResultModel: currentState.searchResultModel.copyWith(
               filterList: newFilterList,
             ),
-          ),
-        );
+          ));
+          break;
+        default:
+          break;
       }
     }
   }
@@ -88,27 +129,22 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
     if (state is SearchResultSuccess) {
       final currentState = state as SearchResultSuccess;
       if (model.type == CategoryType.privilege) {
-        List<int> campaigns = [];
-        int campaignCount = 0;
-        if (model.value) {
-          campaigns = _findSubCategoryCampaigns(
-            currentState.searchCampaignModel.groupedAll,
-            currentState
+        final campaigns = model.value
+            ? currentState
                     .searchCampaignModel.groupedBySubCategoryIds[model.id] ??
-                [],
-          );
-          campaignCount = currentState
-                  .searchCampaignModel.groupedBySubCategoryCount[model.id] ??
-              0;
-        } else {
-          campaigns =
-              currentState.searchCampaignModel.groupedAll.values.toList();
-          campaignCount = currentState.searchCampaignModel.groupCount;
-        }
+                []
+            : currentState.searchCampaignModel.groupedAll;
+        final campaignCount = model.value
+            ? currentState
+                    .searchCampaignModel.groupedBySubCategoryCount[model.id] ??
+                0
+            : currentState.searchCampaignModel.groupedAllCount;
+
         if (campaigns.isEmpty || campaignCount == 0) {
           return;
         }
         emit(currentState.copyWith(
+          selectedSubCategory: model,
           campaignsSortedBy: campaigns,
           campaignCount: campaignCount,
         ));
@@ -124,14 +160,13 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
             currentState.searchResultModel.packageList!.length) {
           return;
         }
-        final cards = await _initLoadPackageCards(currentState
+        final cards = await _loadPackageCards(currentState
             .searchResultModel.packageList!
             .skip(currentState.packageCards.length)
             .toList());
         emit(currentState
             .copyWith(packageCards: [...currentState.packageCards, ...cards]));
       }
-      
     }
   }
 
@@ -154,7 +189,8 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
     return type == CategoryType.privilege ? searchCampaignModel : [];
   }
 
-  Future<List<PackageCardViewModel>> _initLoadPackageCards(
+  // Package
+  Future<List<PackageCardViewModel>> _loadPackageCards(
       List<ProductOffering>? packageList) async {
     if (packageList == null) return [];
     final packageCardHelper = PackageCardHelper(
@@ -170,13 +206,14 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
     return packageCards;
   }
 
-  List<int> _findSubCategoryCampaigns(
-      Map<String, int> groupedAll, List<String> campaignsIds) {
-    final campaigns = <int>[];
-    for (final campaignId in campaignsIds) {
-      campaigns.add(groupedAll[campaignId] ?? 0);
-    }
-    return campaigns;
+  // Privilege
+
+  // Sort
+  Future<List<LoyaltyProgramProductSpec>> _sortCampaigns(
+      int sortNumber, List<LoyaltyProgramProductSpec> campaigns) async {
+    final sortedCampaigns =
+        await SearchUtil.sortCampaigns(campaigns, sortNumber);
+    return sortedCampaigns;
   }
 
   Future<SearchCampaignModel> _filterMapCampaignsAndSubCategories(
@@ -189,24 +226,28 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
 
     final Map<String, List<String>> subCatIdCache = {};
     final campaignsByCatId = <String, List<String>>{};
-    final campaignIdToIndex = <String, int>{};
-
+    final categoryCache = <String, String>{};
     final allCategoryIds = <String>{};
+    final groupedAll = <String>[];
     for (var i = 0; i < data.length; i++) {
       final p = data[i];
 
       final category = await p.category;
       if (category.isEmpty) continue;
-
-      final categoryId = category.first.TORO_syncCategoryId;
+      final cateFirst = category.first;
+      final categoryId = cateFirst.TORO_syncCategoryId;
       final campaignId = p.id;
 
       if (categoryId == null || categoryId.isEmpty || campaignId.isEmpty) {
         continue;
       }
 
+      categoryCache[categoryId] = cateFirst.TORO_categoryType ?? '';
+
       allCategoryIds.add(categoryId);
-      campaignIdToIndex[campaignId] = i;
+
+      groupedAll.add(campaignId);
+
       campaignsByCatId.putIfAbsent(categoryId, () => []).add(campaignId);
     }
 
@@ -214,6 +255,7 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
       return SearchCampaignModel.empty();
     }
 
+    SearchUtil.setCacheCategory(categoryCache);
     // 2) กรอง subCategories และสร้าง map: subCatKey -> campaignIds
     final campaignsBySubCatIds = <String, List<String>>{};
     final resultSubCategories = <SearchCategoryModel>[];
@@ -248,7 +290,6 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
 
     final groupedBySubCategoryCount =
         campaignsBySubCatIds.map((k, v) => MapEntry(k, v.length));
-    final groupCount = data.length;
 
     if (resultSubCategories.length == 1) {
       resultSubCategories.first.value == true;
@@ -258,8 +299,33 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
       groupedBySubCategoryIds: campaignsBySubCatIds,
       subCategories: resultSubCategories,
       groupedBySubCategoryCount: groupedBySubCategoryCount,
-      groupCount: groupCount,
-      groupedAll: campaignIdToIndex,
+      groupedAllCount: groupedAll.length,
+      groupedAll: groupedAll,
     );
+  }
+
+  Map<String, LoyaltyProgramProductSpec>? _mapCampaigns(
+      List<LoyaltyProgramProductSpec>? data) {
+    if (data == null || data.isEmpty) return null;
+    final map = <String, LoyaltyProgramProductSpec>{};
+    for (final element in data) {
+      map[element.id] = element;
+    }
+    return map;
+  }
+
+
+  List<SearchCategoryModel> _compareSelectSubCategory(
+      List<SearchCategoryModel> subCategories,
+      SearchCategoryModel? selectedSubCategory) {
+    if (subCategories.isEmpty || selectedSubCategory == null) return subCategories;
+    if (!selectedSubCategory.value) return subCategories;
+    final replacedSubCategories = subCategories
+        .map((e) => e.id == selectedSubCategory.id
+            ? e.copyWith(value: true)
+            : e.copyWith(value: false))
+        .toList();
+
+    return replacedSubCategories;
   }
 }

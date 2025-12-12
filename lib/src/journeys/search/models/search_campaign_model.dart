@@ -5,7 +5,7 @@ class SearchCampaignModel {
     required this.groupedBySubCategoryIds,
     required this.subCategories,
     required this.groupedBySubCategoryCount,
-    required this.groupCount,
+    required this.groupedAllCount,
     required this.groupedAll,
   });
 
@@ -14,13 +14,13 @@ class SearchCampaignModel {
       groupedBySubCategoryIds: {},
       subCategories: [],
       groupedBySubCategoryCount: {},
-      groupCount: 0,
-      groupedAll: const {},
+      groupedAllCount: 0,
+      groupedAll: const [],
     );
   }
 
-  final int groupCount;
-  final Map<String, int> groupedAll;
+  final int groupedAllCount;
+  final List<String> groupedAll;
   final Map<String, List<String>> groupedBySubCategoryIds;
 
   final Map<String, int> groupedBySubCategoryCount;

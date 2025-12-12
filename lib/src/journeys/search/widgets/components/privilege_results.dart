@@ -17,11 +17,11 @@ class PrivilegeResults extends StatelessWidget {
     required this.isViewAll,
     required this.count,
   });
-  final List<LoyaltyProgramProductSpec> data;
+  final Map<String, LoyaltyProgramProductSpec> data;
   final bool isSelected;
   final VoidCallback onTapViewAll;
   final Function(int) onTapCard;
-  final List<int> sortedBy;
+  final List<String> sortedBy;
   final bool isViewAll;
   final int count;
   @override
@@ -52,7 +52,7 @@ class PrivilegeResults extends StatelessWidget {
                     context,
                     key: ValueKey(
                         'myaisCommonSearch/privilegeCard/$index/cardProductInformation'),
-                    object: data[sortedBy[index]],
+                    object: data[sortedBy[index]]!,
                     onTapCard: (str) {},
                   ));
             },

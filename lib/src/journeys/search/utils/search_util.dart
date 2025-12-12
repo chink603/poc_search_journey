@@ -2,21 +2,25 @@
 import 'package:oda_data_schema/main.core.export.dart';
 import 'package:oda_data_tmf658_loyalty_management/data/extensions/loyalty_program_product_spec_extension.dart';
 
+import '../models/models.dart';
+
 class SearchUtil {
   // Cache สำหรับ expensive operations
-  static final Map<String, int> _priorityCache = {};
-  static final Map<String, num> _pointsCache = {};
-  static final Map<String, bool> _hasPointsCache =
+  static final Map<String, int> priorityCache = {};
+  static final Map<String, num> pointsCache = {};
+  static Map<String, SearchCategoryCache> searchCategoryCache = {};
+  static final Map<String, bool> hasPointsCache =
       {}; // เพิ่ม cache สำหรับ hasPoints
-  static Map<String, String> _categoryCache =
+  static Map<String, String> categoryCache =
       {}; // เพิ่ม cache สำหรับ category
   static const String categoryPoint = 'POINT';
   static const String categoryPrivilege = 'PRIVILEGE';
   static void clearAllCaches() {
-    _priorityCache.clear();
-    _pointsCache.clear();
-    _hasPointsCache.clear();
-    _categoryCache.clear();
+    priorityCache.clear();
+    pointsCache.clear();
+    hasPointsCache.clear();
+    categoryCache.clear();
+    searchCategoryCache.clear();
   }
 
   static Future<List<LoyaltyProgramProductSpec>> sortCampaigns(
@@ -129,65 +133,65 @@ class SearchUtil {
   static Future<int> _getCachedPriority(LoyaltyProgramProductSpec campaign) async {
     final cacheKey = campaign.id;
 
-    if (!_priorityCache.containsKey(cacheKey)) {
+    if (!priorityCache.containsKey(cacheKey)) {
       try {
-        _priorityCache[cacheKey] = await campaign.getCampaignPriority();
+        priorityCache[cacheKey] = await campaign.getCampaignPriority();
       } catch (e) {
-        _priorityCache[cacheKey] = 999;
+        priorityCache[cacheKey] = 999;
       }
     }
 
-    return _priorityCache[cacheKey]!;
+    return priorityCache[cacheKey]!;
   }
 
   static Future<num> _getCachedPoints(LoyaltyProgramProductSpec campaign) async {
     final cacheKey = campaign.id;
 
-    if (!_pointsCache.containsKey(cacheKey)) {
+    if (!pointsCache.containsKey(cacheKey)) {
       try {
-        _pointsCache[cacheKey] = toNumSafe(await campaign.getPoints(isPureData: false));
+        pointsCache[cacheKey] = toNumSafe(await campaign.getPoints(isPureData: false));
       } catch (e) {
-        _pointsCache[cacheKey] = 0;
+        pointsCache[cacheKey] = 0;
       }
     }
 
-    return _pointsCache[cacheKey]!;
+    return pointsCache[cacheKey]!;
   }
 
   static Future<String> _getCachedCategoryType(
       LoyaltyProgramProductSpec campaign) async {
     final cacheKey = campaign.id;
 
-    if (!_categoryCache.containsKey(cacheKey)) {
+    if (!SearchUtil.categoryCache.containsKey(cacheKey)) {
       try {
         final categoryFuture = await campaign.category;
         final categoryName = categoryFuture.isNotEmpty
             ? categoryFuture.first.TORO_categoryType ?? ''
             : '';
-        _categoryCache[cacheKey] = categoryName;
+        SearchUtil.categoryCache[cacheKey] = categoryName;
       } catch (e) {
-        _categoryCache[cacheKey] = '';
+        SearchUtil.categoryCache[cacheKey] = '';
       }
     }
 
-    return _categoryCache[cacheKey]!;
+    return SearchUtil.categoryCache[cacheKey]!;
   }
 
   static Future<bool> _hasPointsCategoryCached(
       LoyaltyProgramProductSpec campaign) async {
     final cacheKey = campaign.id;
 
-    if (!_hasPointsCache.containsKey(cacheKey)) {
+    if (!hasPointsCache.containsKey(cacheKey)) {
       try {
         bool hasPoints = false;
         hasPoints = await _getCachedCategoryType(campaign) == categoryPoint;
-        _hasPointsCache[cacheKey] = hasPoints;
+        hasPointsCache[cacheKey] = hasPoints;
       } catch (e) {
-        _hasPointsCache[cacheKey] = false;
+        hasPointsCache[cacheKey] = false;
       }
     }
 
-    return _hasPointsCache[cacheKey]!;
+    return hasPointsCache[cacheKey]!;
   }
 
   static num toNumSafe(dynamic value) {
@@ -196,11 +200,5 @@ class SearchUtil {
     final str = value.toString();
     final parsed = num.tryParse(str);
     return parsed ?? 0;
-  }
-
-  static void setCacheCategory(Map<String, String> cache) {
-    if (cache.isNotEmpty) {
-      _categoryCache = cache;
-    }
   }
 }

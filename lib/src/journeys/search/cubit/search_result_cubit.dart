@@ -14,7 +14,6 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
       : super(initialState: SearchResultInitial());
 
   void reset() {
-    SearchUtil.clearAllCaches();
     emit(SearchResultInitial());
   }
 
@@ -231,8 +230,18 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
     final groupedAll = <String>[];
     for (var i = 0; i < data.length; i++) {
       final p = data[i];
-
+      final searchCache = SearchUtil.searchCategoryCache[p.id];
+      if (searchCache != null) {
+        final categoryType = searchCache.categoryType;
+        final syncCategoryId = searchCache.syncCategoryId;
+        categoryCache[syncCategoryId] = categoryType;
+        allCategoryIds.add(syncCategoryId);
+        groupedAll.add(p.id);
+        campaignsByCatId.putIfAbsent(syncCategoryId, () => []).add(p.id);
+        continue;
+      }
       final category = await p.category;
+      
       if (category.isEmpty) continue;
       final cateFirst = category.first;
       final categoryId = cateFirst.TORO_syncCategoryId;
@@ -248,6 +257,12 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
 
       groupedAll.add(campaignId);
 
+      SearchUtil.searchCategoryCache.putIfAbsent(campaignId, () => SearchCategoryCache(
+        categoryType: cateFirst.TORO_categoryType ?? '',
+        syncCategoryId: categoryId,
+      ));
+      SearchUtil.categoryCache.putIfAbsent(categoryId, () => cateFirst.TORO_categoryType ?? '');
+
       campaignsByCatId.putIfAbsent(categoryId, () => []).add(campaignId);
     }
 
@@ -255,7 +270,6 @@ class SearchResultCubit extends OdaCubit<ODACubitState> {
       return SearchCampaignModel.empty();
     }
 
-    SearchUtil.setCacheCategory(categoryCache);
     // 2) กรอง subCategories และสร้าง map: subCatKey -> campaignIds
     final campaignsBySubCatIds = <String, List<String>>{};
     final resultSubCategories = <SearchCategoryModel>[];

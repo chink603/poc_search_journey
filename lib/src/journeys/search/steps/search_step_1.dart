@@ -13,6 +13,7 @@ import 'package:oda_search_micro_journey/src/journeys/search/widgets/components/
 import '../bloc/bloc/search_bloc.dart';
 import '../config/j_search_config.dart';
 import '../models/models.dart';
+import '../utils/search_util.dart';
 import '../utils/util.dart';
 import '../widgets/widgets.dart';
 
@@ -33,6 +34,7 @@ class SearchStep0 extends OdaStep {
     searchBloc = null;
     searchResultCubit = null;
     _isButtonVisible.value = false;
+    SearchUtil.clearAllCaches();
     super.dispose();
   }
 

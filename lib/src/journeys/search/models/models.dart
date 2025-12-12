@@ -13,3 +13,4 @@ export 'search_quick_menu_master.dart';
 export 'search_asset_model.dart';
 export 'search_result_model.dart';
 export 'search_campaign_model.dart';
+export 'search_category_cache.dart';
